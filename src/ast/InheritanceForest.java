@@ -18,8 +18,10 @@ public class InheritanceForest {
 			if(children == null) children = new ArrayList<>();
 			this.children.add(child);
 		}
+
 	}
 	
+	/*helper Linked Lists for builder*/
 	private class LLclasses{
 		private class node{
 			node next;
@@ -52,8 +54,8 @@ public class InheritanceForest {
 	private HashMap<String, ForestNode> nodeMap;
 	private MainClass main;
 	
-	public InheritanceForest(MainClass main, List<ClassDecl> classes) {
-		this.main = main;
+	public InheritanceForest(Program prog) {
+		this.main = prog.mainClass();
 		trees = new ArrayList<>();
 		nodeMap = new HashMap<>();
 		
@@ -61,7 +63,7 @@ public class InheritanceForest {
 		LLclasses classBag = new LLclasses();
 		
 		/*add all roots to the ArrayList trees*/
-		for(ClassDecl cls : classes) {
+		for(ClassDecl cls : prog.classDecls()) {
 			if(cls.superName() == null) {
 				tmp = new ForestNode(null, cls);
 				trees.add(tmp);
@@ -100,6 +102,48 @@ public class InheritanceForest {
 		parr.addChild(tmp);
 		nodeMap.put(cls.name(), tmp);
 	}
+	
+	public List<ClassDecl> getChildren(String className) {
+		if(nodeMap.get(className).children == null) return null;
+		List<ClassDecl> res = new ArrayList<>();
+		for(ForestNode child : nodeMap.get(className).children) {
+			res.add(child.self);
+		}
+		return res;
+	}
+	
+	public List<ClassDecl> getDecendents(String className){
+		if(nodeMap.get(className).children == null) return null;
+		return recGetDecendents(className);
+	}
+	
+	private List<ClassDecl> recGetDecendents(String className){
+		if(nodeMap.get(className).children == null) return new ArrayList<ClassDecl>();
+		List<ClassDecl> res = getChildren(className);
+		List<ClassDecl> tmp = getChildren(className);
+		for(ClassDecl child : tmp) {
+			res.addAll(recGetDecendents(child.name()));
+		}
+		return res;
+	}
+	
+	public List<ClassDecl> getAncestors(String className){
+		if(nodeMap.get(className).superNode == null) return null;
+		ArrayList<ClassDecl> res = new ArrayList<>();
+		ForestNode parr = nodeMap.get(className).superNode;
+		while(parr != null) {
+			res.add(parr.self);
+			parr = parr.superNode;
+		}
+		return res;
+	}
+	
+	public ClassDecl getSuper(String className) {
+		return nodeMap.get(className).self;
+	}
+	
+	
+	public MainClass main() {return main;}
 	
 	
 }
