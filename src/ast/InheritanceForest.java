@@ -7,11 +7,11 @@ public class InheritanceForest {
 	private class ForestNode {
 		ForestNode superNode;
 		ArrayList<ForestNode> children;
-		ClassDecl self;
+		ClassDecl value;
 		
-		public ForestNode(ForestNode superNode, ClassDecl self) {
+		public ForestNode(ForestNode superNode, ClassDecl value) {
 			this.superNode = superNode;
-			this.self = self;
+			this.value = value;
 		}
 		
 		void addChild(ForestNode child) {
@@ -52,10 +52,10 @@ public class InheritanceForest {
 	
 	private ArrayList<ForestNode> trees;
 	private HashMap<String, ForestNode> nodeMap;
-	private MainClass main;
+	private MainClass mainClass;
 	
 	public InheritanceForest(Program prog) {
-		this.main = prog.mainClass();
+		this.mainClass = prog.mainClass();
 		trees = new ArrayList<>();
 		nodeMap = new HashMap<>();
 		
@@ -103,11 +103,13 @@ public class InheritanceForest {
 		nodeMap.put(cls.name(), tmp);
 	}
 	
+	public MainClass mainClass() {return mainClass;}
+	
 	public List<ClassDecl> getChildren(String className) {
 		if(nodeMap.get(className).children == null) return null;
 		List<ClassDecl> res = new ArrayList<>();
 		for(ForestNode child : nodeMap.get(className).children) {
-			res.add(child.self);
+			res.add(child.value);
 		}
 		return res;
 	}
@@ -132,19 +134,33 @@ public class InheritanceForest {
 		ArrayList<ClassDecl> res = new ArrayList<>();
 		ForestNode parr = nodeMap.get(className).superNode;
 		while(parr != null) {
-			res.add(parr.self);
+			res.add(parr.value);
 			parr = parr.superNode;
 		}
 		return res;
 	}
 	
 	public ClassDecl getSuper(String className) {
-		return nodeMap.get(className).self;
+		return nodeMap.get(className).value;
 	}
 	
 	
-	public MainClass main() {return main;}
+	/*
+	 * Overloading with input type to be ClassDecl for conveniece
+	 */
+	public List<ClassDecl> getChildren(ClassDecl cls){
+		return getChildren(cls.name());
+	}
 	
+	public List<ClassDecl> getDecendents(ClassDecl cls){
+		return getDecendents(cls.name());
+	}
+	public List<ClassDecl> getAncestors(ClassDecl cls){
+		return getAncestors(cls.name());
+	}
+	public ClassDecl getSuper(ClassDecl cls) {
+		return getSuper(cls.name());
+	}
 	
 }
 
