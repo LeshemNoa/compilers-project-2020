@@ -32,3 +32,6 @@ local.properties
 
 # Comiler project specific
 **/res.xml
+
+# ignore auto-generated
+src/sym.java
