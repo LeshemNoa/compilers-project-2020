@@ -144,6 +144,11 @@ public class InheritanceForest {
 		return nodeMap.get(className).value;
 	}
 	
+	public ClassDecl nameToClassDecl(String name) {
+		if(name == null) return null;
+		return nodeMap.get(name).value;
+	}
+	
 	
 	/*
 	 * Overloading with input type to be ClassDecl for conveniece
@@ -163,10 +168,4 @@ public class InheritanceForest {
 	}
 	
 }
-
-
-
-
-
-
 
