@@ -15,4 +15,14 @@ public abstract class AstNode {
     }
 
     abstract public void accept(Visitor v);
+
+    private SymbolTable enclosingScope;
+
+    public void setEnclosingScope(SymbolTable enclosingScope) {
+        this.enclosingScope = enclosingScope;
+    }
+
+    public SymbolTable getEnclosingScope() {
+        return this.enclosingScope;
+    }
 }

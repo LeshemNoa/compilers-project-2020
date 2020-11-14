@@ -12,6 +12,8 @@ public class MainClass extends AstNode {
     @XmlElement(required = true)
     private StatementWrapper mainStatement;
 
+    private SymbolTable symbolTable = null;
+
     // for deserialization only!
     public MainClass() {
     }
@@ -39,4 +41,5 @@ public class MainClass extends AstNode {
     public Statement mainStatement() {
         return mainStatement.s;
     }
+
 }
