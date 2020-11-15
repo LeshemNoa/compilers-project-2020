@@ -2,7 +2,7 @@ package ast;
 
 public class STSymbol {
     public enum SymbolKind {
-        VAR, METHOD, FIELD, CLASS_DECL
+        VAR, METHOD, FIELD,
     }
 
     private String id;
@@ -14,7 +14,9 @@ public class STSymbol {
      */
     private AstNode decl;
 
+
     public STSymbol(String id, SymbolKind kind, String className,AstNode decl) {
+
         this.id = id;
         this.decl = decl;
         this.kind = kind;

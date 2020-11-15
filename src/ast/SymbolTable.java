@@ -9,8 +9,15 @@ public class SymbolTable {
     private SymbolTable parentSymbolTable;
     private List<SymbolTable> childSymbolTables;
 
+
+    public SymbolTable(Program program) {
+        this.parentSymbolTable = null;
+        this.entries = new HashMap<>();
+        SymbolTableBuilder STBuilder = new SymbolTableBuilder(program, this);
+    }
+
     public SymbolTable(SymbolTable parentST, String id) {
-    	this.scopeName = id;
+		this.scopeName = id;
         this.parentSymbolTable = parentST;
         this.entries = new HashMap<>();
     }
