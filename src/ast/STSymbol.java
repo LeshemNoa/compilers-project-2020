@@ -2,7 +2,7 @@ package ast;
 
 public class STSymbol {
     public enum SymbolKind {
-        VAR, METHOD, FIELD, CLASS_DECL
+        VAR, METHOD, FIELD,
     }
 
     private String id;
@@ -12,6 +12,8 @@ public class STSymbol {
      * instantiated - that way we enjoy all the data in the node
      */
     private AstNode decl;
+
+    public AstNode decl() { return decl; }
 
     public STSymbol(String id, SymbolKind kind, AstNode decl) {
         this.id = id;
