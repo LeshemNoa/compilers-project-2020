@@ -12,7 +12,7 @@ public class MethodRenameVisitor implements Visitor {
 	
 	private InheritanceForest forest;
 	
-	private Set<ClassDecl> containingClasses;
+	private Set<String> containingClasses;
 	
 	public MethodRenameVisitor(String oldName, String newName, int lineNumber) {
 		
@@ -27,7 +27,6 @@ public class MethodRenameVisitor implements Visitor {
 	public void visit(Program program) {
 		forest = new InheritanceForest(program);
 		
-		program.mainClass().accept(this);
 		/* two for loops:
 		 * once to find the method and build containingClasses set
 		 * second time to do the actual renaming
@@ -40,6 +39,8 @@ public class MethodRenameVisitor implements Visitor {
 		for(ClassDecl cls : program.classDecls()) {
 			cls.accept(this);
 		}
+		
+		program.mainClass().accept(this);
 	}
 	
 	private Set<String> getMethodNames(ClassDecl cls){
@@ -62,10 +63,10 @@ public class MethodRenameVisitor implements Visitor {
 		
 		//now make the list
 		containingClasses = new HashSet<>();
-		containingClasses.add(cls);
+		containingClasses.add(cls.name());
 		for(ClassDecl decendentCls : forest.getDecendents(cls)) {
 			if(getMethodNames(decendentCls).contains(oldName)) {
-				containingClasses.add(decendentCls);
+				containingClasses.add(decendentCls.name());
 			}
 		}
 	}
@@ -74,7 +75,7 @@ public class MethodRenameVisitor implements Visitor {
 	public void visit(ClassDecl classDecl) {
 		for(MethodDecl mtd : classDecl.methoddecls()) {
 			if(containingClasses != null) {
-				if(mtd.name() == oldName && containingClasses.contains(classDecl)) {
+				if(mtd.name() == oldName && containingClasses.contains(classDecl.name())) {
 					mtd.setName(newName);
 					mtd.accept(this);
 				}
@@ -88,7 +89,7 @@ public class MethodRenameVisitor implements Visitor {
 
 	@Override
 	public void visit(MainClass mainClass) {
-		// TODO Auto-generated method stub
+		mainClass.mainStatement().accept(this);
 
 	}
 
@@ -190,10 +191,46 @@ public class MethodRenameVisitor implements Visitor {
 
 	}
 
+	/*
+	 * In o.f(arg1, ...) expressions, o must be either:
+	 * a local variable, a field, a new A(), or this,
+	 * but more complex expressions for o are disallowed.
+	 */
+	
+	private boolean changeNeeded(Expr e) {
+		String className = "";
+		//switch case
+		switch (e.getClass().getName()) {
+		case "ThisExpr":
+			className = e.getEnclosingScope().getParent().name();
+			break;
+		
+		case "IdentifierExpr":
+			IdentifierExpr idf = (IdentifierExpr)e;
+			className = e.getEnclosingScope().getClassName(idf.id());
+			break;
+			
+		case "NewObjectExpr":
+			NewObjectExpr newOb = (NewObjectExpr)e;
+			className = newOb.classId();
+			break;
+			
+		default:
+			//error. throw exception (?)
+			
+		}
+		return containingClasses.contains(className);
+	}
+	
 	@Override
 	public void visit(MethodCallExpr e) {
-		// TODO Auto-generated method stub
-
+		for(Expr expr : e.actuals()) {
+			expr.accept(this);
+		}
+		
+		if(e.methodId() != oldName) return;
+		
+		if(changeNeeded(e.ownerExpr())) e.setMethodId(newName);
 	}
 
 	@Override
@@ -206,11 +243,7 @@ public class MethodRenameVisitor implements Visitor {
 	public void visit(FalseExpr e) {return;}
 
 	@Override
-	public void visit(IdentifierExpr e) {
-		// what is this used for???
-		// TODO Auto-generated method stub
-
-	}
+	public void visit(IdentifierExpr e) {return;}
 
 	@Override
 	public void visit(ThisExpr e) {return;}
