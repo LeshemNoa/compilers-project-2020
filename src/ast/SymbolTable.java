@@ -29,7 +29,7 @@ public class SymbolTable {
         this.childSymbolTables.add(childST);
     }
     
-    public String name() {
+    public String scopeName() {
     	return scopeName;
     }
     
@@ -39,20 +39,21 @@ public class SymbolTable {
     
     public String findDeclScope(String variable, InheritanceForest forest) {
     	SymbolTable tbl = findDeclTable(variable, forest);
-    	return tbl != null ? tbl.name() : null; 	
+    	return tbl != null ? tbl.scopeName() : null; 	
     }
     
     public SymbolTable findDeclTable(String variable, InheritanceForest forest) {
     	if(isHere(variable)) return this;
     	//the next line is based on the fact that the SymbolTable of a class has no parent
     	SymbolTable res = parentSymbolTable != null ? parentSymbolTable : this;
-    	String nm = res != null ? res.name() : null; 
+    	String nm = res != null ? res.scopeName() : null; 
     	ClassDecl resClass = forest.nameToClassDecl(nm);
     	while(resClass != null && !res.isHere(variable)) {
     		resClass = forest.getSuper(resClass);
     		res = classDeclToSymbolTable(resClass);
     	}
     	return res;
+
     }
     
     //this feels a little silly to define, but it helps not change builers

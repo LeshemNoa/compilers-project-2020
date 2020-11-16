@@ -202,7 +202,7 @@ public class MethodRenameVisitor implements Visitor {
 		//switch case
 		switch (e.getClass().getName()) {
 		case "ThisExpr":
-			className = e.getEnclosingScope().getParent().name();
+			className = e.getEnclosingScope().getParent().scopeName();
 			break;
 		
 		case "IdentifierExpr":
