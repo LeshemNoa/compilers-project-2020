@@ -28,7 +28,7 @@ public class SymbolTable {
         this.childSymbolTables.add(childST);
     }
     
-    public String name() {
+    public String scopeName() {
     	return scopeName;
     }
     
@@ -42,7 +42,7 @@ public class SymbolTable {
     		curr = curr.getParent();
     	}
     	
-    	return curr != null ? curr.name() : null;
+    	return curr != null ? curr.scopeName() : null;
     }
     
     public String getClassName(String variable) {

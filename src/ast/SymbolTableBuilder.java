@@ -21,7 +21,7 @@ public class SymbolTableBuilder {
     private void addFieldSymbols(ClassDecl classDecl, SymbolTable declST) {
         List<VarDecl> fields = classDecl.fields();
         for (VarDecl field : fields) {
-            STSymbol fieldSymbol = new STSymbol(field.name(), STSymbol.SymbolKind.FIELD, field);
+            STSymbol fieldSymbol = new STSymbol(field.name(), STSymbol.SymbolKind.FIELD, classDecl.name(), field);
             declST.addEntry(field.name(), fieldSymbol);
         }
     }
@@ -36,9 +36,9 @@ public class SymbolTableBuilder {
         List<MethodDecl> methods = classDecl.methoddecls();
         for (MethodDecl method : methods) {
             method.setEnclosingScope(classDeclST);
-            STSymbol methodSymbol = new STSymbol(method.name(), STSymbol.SymbolKind.METHOD, method);
+            STSymbol methodSymbol = new STSymbol(method.name(), STSymbol.SymbolKind.METHOD, classDecl.name(), method);
             classDeclST.addEntry(method.name(), methodSymbol);
-            SymbolTable methodST = new SymbolTable(classDeclST);
+            SymbolTable methodST = new SymbolTable(classDeclST, method.name());
             method.setEnclosingScope(classDeclST);
             classDeclST.addChildSymbolTable(methodST);
             addVariableSymbols(method, methodST);
@@ -56,11 +56,11 @@ public class SymbolTableBuilder {
         List<FormalArg> arguments = method.formals();
         for (VarDecl variable : variables) {
             variable.setEnclosingScope(methodST);
-            STSymbol variableSymbol = new STSymbol(variable.name(), STSymbol.SymbolKind.VAR, variable);
+            STSymbol variableSymbol = new STSymbol(variable.name(), STSymbol.SymbolKind.VAR, method.getEnclosingScope().scopeName(), variable);
             methodST.addEntry(variable.name(), variableSymbol);
         }
         for (FormalArg arg : arguments) {
-            STSymbol argSymbol = new STSymbol(arg.name(), STSymbol.SymbolKind.VAR, arg);
+            STSymbol argSymbol = new STSymbol(arg.name(), STSymbol.SymbolKind.VAR, method.getEnclosingScope().scopeName(), arg);
             methodST.addEntry(arg.name(), argSymbol);
         }
     }
@@ -77,7 +77,7 @@ public class SymbolTableBuilder {
         mainClass.setEnclosingScope(programSymTable);
         for (ClassDecl classdecl : program.classDecls()) {
             classdecl.setEnclosingScope(programSymTable);
-            SymbolTable classDeclST = new SymbolTable(programSymTable);
+            SymbolTable classDeclST = new SymbolTable(programSymTable, classdecl.name());
             programSymTable.addChildSymbolTable(classDeclST);
             addFieldSymbols(classdecl, classDeclST);
             addMethodSymbols(classdecl, classDeclST);
