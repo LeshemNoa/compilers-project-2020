@@ -208,8 +208,8 @@ public class MethodRenameVisitor implements Visitor {
 		case "IdentifierExpr":
 			IdentifierExpr idf = (IdentifierExpr)e;
 			String varName = idf.id();
-			SymbolTable tbl = e.getEnclosingScope().findDeclTable(varName);
-			VarDecl decl = (VarDecl) tbl.getVarDecl(varName);
+			SymbolTable tbl = e.getEnclosingScope().findDeclTable(varName, this.forest);
+			VarDecl decl = (VarDecl) tbl.getDeclNode(varName);
 			className = varDeclToTypeName(decl);
 			break;
 			
