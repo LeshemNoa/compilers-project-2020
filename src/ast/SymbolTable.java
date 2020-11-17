@@ -42,11 +42,12 @@ public class SymbolTable {
     	return tbl != null ? tbl.scopeName() : null; 	
     }
     
+    
     public SymbolTable findDeclTable(String variable, InheritanceForest forest) {
     	if(isHere(variable)) return this;
-    	//the next line is based on the fact that the SymbolTable of a class has no parent
+    	//the next line is based on the fact that the parentSymbolTable of a class has no parent
     	SymbolTable res = parentSymbolTable != null ? parentSymbolTable : this;
-    	String nm = res != null ? res.scopeName() : null; 
+    	String nm = res != null ? res.scopeName() : null;
     	ClassDecl resClass = forest.nameToClassDecl(nm);
     	while(resClass != null && !res.isHere(variable)) {
     		resClass = forest.getSuper(resClass);
@@ -64,8 +65,7 @@ public class SymbolTable {
     	if(cls.fields().size() > 0) return cls.fields().get(0).getEnclosingScope();
     	else return cls.methoddecls().get(0).getEnclosingScope();
     }
-    
-    
+        
     public String getClassName(String variable, InheritanceForest forest) {
     	if(isHere(variable)) return entries.get(variable).className();
     	else return findDeclTable(variable, forest).getClassName(variable, forest);
