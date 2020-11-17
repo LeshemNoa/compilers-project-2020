@@ -65,6 +65,7 @@ public class SymbolTable {
     	else return cls.methoddecls().get(0).getEnclosingScope();
     }
     
+    
     public String getClassName(String variable, InheritanceForest forest) {
     	if(isHere(variable)) return entries.get(variable).className();
     	else return findDeclTable(variable, forest).getClassName(variable, forest);
