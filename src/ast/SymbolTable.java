@@ -56,6 +56,7 @@ public class SymbolTable {
 
     }
     
+    
     //this feels a little silly to define, but it helps not change builers
     private SymbolTable classDeclToSymbolTable(ClassDecl cls) {
     	//Assuming at least one field or one method are defined in cls
@@ -63,7 +64,6 @@ public class SymbolTable {
     	if(cls.fields().size() > 0) return cls.fields().get(0).getEnclosingScope();
     	else return cls.methoddecls().get(0).getEnclosingScope();
     }
-    
     
     public String getClassName(String variable, InheritanceForest forest) {
     	if(isHere(variable)) return entries.get(variable).className();
