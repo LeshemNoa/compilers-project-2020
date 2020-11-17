@@ -35,6 +35,10 @@ public class SymbolTable {
     	
     }
     
+    public SymbolTable findDeclTable(String variable) {
+    	//should return the SymbolTable in which variable is declared
+    }
+    
     public String getClassName(String variable) {
     	if(isHere(variable)) return entries.get(variable).className();
     	else return getClassName(findDeclScope(variable));

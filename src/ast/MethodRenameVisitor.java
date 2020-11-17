@@ -208,7 +208,7 @@ public class MethodRenameVisitor implements Visitor {
 		case "IdentifierExpr":
 			IdentifierExpr idf = (IdentifierExpr)e;
 			String varName = idf.id();
-			SymbolTable tbl = e.getEnclosingScope().findDeclScope();
+			SymbolTable tbl = e.getEnclosingScope().findDeclTable(varName);
 			VarDecl decl = (VarDecl) tbl.getVarDecl(varName);
 			className = varDeclToTypeName(decl);
 			break;
@@ -227,7 +227,7 @@ public class MethodRenameVisitor implements Visitor {
 	
 	private String varDeclToTypeName(VarDecl decl){
 	
-		switch (decl.type().getClass().getName(){
+		switch (decl.type().getClass().getName()){
 		
 			case("BoolAstType"):
 				return "boolean";
@@ -240,7 +240,10 @@ public class MethodRenameVisitor implements Visitor {
 				
 			case("RefType"):
 				return ((RefType)(decl.type())).id();
-		
+			
+			default:
+				//error
+				return null;
 		}
 	}
 	
