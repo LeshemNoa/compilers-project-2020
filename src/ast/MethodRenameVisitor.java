@@ -68,10 +68,6 @@ public class MethodRenameVisitor implements Visitor {
 		containingClasses = new HashSet<>();
 		containingClasses.add(cls.name());
 		for(ClassDecl descendantCls : forest.getDescendants(cls)) {
-			/**
-			 * possible bug: getMethodNames returns list of declarations
-			 * and inherited methods are not declared. I think we'll have to
-			 */
 			if(getMethodNames(descendantCls).contains(oldName)) {
 				containingClasses.add(descendantCls.name());
 			}

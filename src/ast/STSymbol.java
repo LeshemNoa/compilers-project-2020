@@ -22,10 +22,6 @@ public class STSymbol {
 
     /**
      * Symbol constructor for VAR and FIELD symbol kinds
-     * @param id
-     * @param kind
-     * @param className
-     * @param decl
      */
     public STSymbol(String id, SymbolKind kind, String className, AstNode decl) {
         this.id = id;

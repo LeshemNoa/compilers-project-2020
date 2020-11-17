@@ -5,9 +5,6 @@ public class STLookup {
      * Purpose: get the ST where variable with provided name, used in a method, is actually declared -
      * it could be a local variable in the method, it could be a field from the enclosing class,
      * or it could be a field in an ancestor class.
-     * @param variable
-     * @param forest
-     * @return
      */
     public static SymbolTable findDeclTable(String variable, InheritanceForest forest, SymbolTable enclosingScope, SymbolTable programST) {
         if (enclosingScope.contains(variable)) return enclosingScope;
