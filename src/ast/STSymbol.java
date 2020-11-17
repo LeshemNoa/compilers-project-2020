@@ -13,10 +13,9 @@ public class STSymbol {
      * instantiated - that way we enjoy all the data in the node
      */
     private AstNode decl;
-
-    public AstNode decl() { return decl; }
     
     public STSymbol(String id, SymbolKind kind, String className, AstNode decl) {
+
         this.id = id;
         this.decl = decl;
         this.kind = kind;
