@@ -84,8 +84,8 @@ public class MethodRenameVisitor implements Visitor {
 			if(containingClasses != null) {
 				if(mtd.name().equals(oldName) && containingClasses.contains(classDecl.name())) {
 					mtd.setName(newName);
-					mtd.accept(this);
 				}
+				mtd.accept(this);
 			}
 			else if(mtd.name().equals(oldName) && mtd.lineNumber == this.lineNumber) {
 				buildClassList(classDecl);
