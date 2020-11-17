@@ -45,7 +45,7 @@ public class SymbolTable {
     
     public SymbolTable findDeclTable(String variable, InheritanceForest forest) {
     	if(isHere(variable)) return this;
-    	//the next line is based on the fact that the parentSymbolTable of a class has no parent
+    	//the next line is based on the fact that the SymbolTable of a class has no parent
     	SymbolTable res = parentSymbolTable != null ? parentSymbolTable : this;
     	String nm = res != null ? res.scopeName() : null;
     	ClassDecl resClass = forest.nameToClassDecl(nm);
