@@ -30,25 +30,43 @@ public class SymbolTable {
     	return entries.containsKey(name);
     }
     
-    public String findDeclScope(String variable) {
-    	//PROBLEM
-    	
+    public String findDeclScope(String variable, InheritanceForest forest) {
+    	SymbolTable tbl = findDeclTable(variable, forest);
+    	return tbl != null ? tbl.name() : null; 	
     }
     
-    public SymbolTable findDeclTable(String variable) {
-    	//should return the SymbolTable in which variable is declared
+    public SymbolTable findDeclTable(String variable, InheritanceForest forest) {
+    	if(isHere(variable)) return this;
+    	//the next line is based on the fact that the parentSymbolTable of a class has no parent
+    	SymbolTable res = parentSymbolTable != null ? parentSymbolTable : this;
+    	String nm = res != null ? res.name() : null;
+    	ClassDecl resClass = forest.nameToClassDecl(nm);
+    	while(resClass != null && !res.isHere(variable)) {
+    		resClass = forest.getSuper(resClass);
+    		res = classDeclToSymbolTable(resClass);
+    	}
+    	return res;
     }
     
-    public String getClassName(String variable) {
+    //this feels a little silly to define, but it helps not change builers
+    private SymbolTable classDeclToSymbolTable(ClassDecl cls) {
+    	//Assuming at least one field or one method are defined in cls
+    	//if the above is not true than the esle case will have null pointer exception
+    	if(cls.fields().size() > 0) return cls.fields().get(0).getEnclosingScope();
+    	else return cls.methoddecls().get(0).getEnclosingScope();
+    }
+    
+    
+    public String getClassName(String variable, InheritanceForest forest) {
     	if(isHere(variable)) return entries.get(variable).className();
-    	else return getClassName(findDeclScope(variable));
+    	else return findDeclTable(variable, forest).getClassName(variable, forest);
     }
     
     public SymbolTable getParent() {
     	return parentSymbolTable;
     }
     
-    public AstNode getVarDecl(String varName){
+    public AstNode getDeclNode(String varName){
     	if(!entries.containsKey(varName)) return null;
     	return entries.get(varName).decleration();
     }
