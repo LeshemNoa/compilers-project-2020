@@ -31,12 +31,8 @@ public class SymbolTable {
     }
     
     public String findDeclScope(String variable) {
-    	SymbolTable curr = this;
-    	while(curr != null && !curr.isHere(variable)) {
-    		curr = curr.getParent();
-    	}
+    	//PROBLEM
     	
-    	return curr != null ? curr.name() : null;
     }
     
     public String getClassName(String variable) {
@@ -46,5 +42,10 @@ public class SymbolTable {
     
     public SymbolTable getParent() {
     	return parentSymbolTable;
+    }
+    
+    public AstNode getVarDecl(String varName){
+    	if(!entries.containsKey(varName)) return null;
+    	return entries.get(varName).decleration();
     }
 }
