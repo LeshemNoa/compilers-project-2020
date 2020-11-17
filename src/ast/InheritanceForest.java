@@ -114,7 +114,7 @@ public class InheritanceForest {
 		return res;
 	}
 	
-	public List<ClassDecl> getDecendents(String className){
+	public List<ClassDecl> getDescendants(String className){
 		if(nodeMap.get(className).children == null) return null;
 		return recGetDecendents(className);
 	}
@@ -157,8 +157,8 @@ public class InheritanceForest {
 		return getChildren(cls.name());
 	}
 	
-	public List<ClassDecl> getDecendents(ClassDecl cls){
-		return getDecendents(cls.name());
+	public List<ClassDecl> getDescendants(ClassDecl cls){
+		return getDescendants(cls.name());
 	}
 	public List<ClassDecl> getAncestors(ClassDecl cls){
 		return getAncestors(cls.name());

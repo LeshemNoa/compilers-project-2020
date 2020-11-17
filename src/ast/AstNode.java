@@ -8,6 +8,7 @@ public abstract class AstNode {
 
     public AstNode() {
         lineNumber = null;
+        enclosingScope = null;
     }
 
     public AstNode(int lineNumber) {
@@ -16,6 +17,9 @@ public abstract class AstNode {
 
     abstract public void accept(Visitor v);
 
+    /**
+     * ST where ast node is declared
+     */
     private SymbolTable enclosingScope;
 
     public void setEnclosingScope(SymbolTable enclosingScope) {

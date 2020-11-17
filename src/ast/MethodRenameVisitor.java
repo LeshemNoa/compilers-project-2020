@@ -5,15 +5,17 @@ import java.util.*;
 public class MethodRenameVisitor implements Visitor {
 
 	private String oldName;
-	
+
 	private String newName;
-	
+
 	private int lineNumber;
-	
+
 	private InheritanceForest forest;
-	
+
 	private Set<String> containingClasses;
-	
+
+	private SymbolTable programSymbolTable;
+
 	public MethodRenameVisitor(String oldName, String newName, int lineNumber) {
 		
 		this.oldName = oldName;
@@ -26,7 +28,8 @@ public class MethodRenameVisitor implements Visitor {
 	@Override
 	public void visit(Program program) {
 		forest = new InheritanceForest(program);
-		
+		programSymbolTable = new SymbolTable(program);
+
 		/* two for loops:
 		 * once to find the method and build containingClasses set
 		 * second time to do the actual renaming
@@ -53,7 +56,7 @@ public class MethodRenameVisitor implements Visitor {
 		return res;
 	}
 	
-	private void bildClassList(ClassDecl cls) {
+	private void buildClassList(ClassDecl cls) {
 		
 		//find oldest ancestor with this method
 		ClassDecl superClass = forest.nameToClassDecl(cls.superName());
@@ -64,9 +67,13 @@ public class MethodRenameVisitor implements Visitor {
 		//now make the list
 		containingClasses = new HashSet<>();
 		containingClasses.add(cls.name());
-		for(ClassDecl decendentCls : forest.getDecendents(cls)) {
-			if(getMethodNames(decendentCls).contains(oldName)) {
-				containingClasses.add(decendentCls.name());
+		for(ClassDecl descendantCls : forest.getDescendants(cls)) {
+			/**
+			 * possible bug: getMethodNames returns list of declarations
+			 * and inherited methods are not declared. I think we'll have to
+			 */
+			if(getMethodNames(descendantCls).contains(oldName)) {
+				containingClasses.add(descendantCls.name());
 			}
 		}
 	}
@@ -75,13 +82,13 @@ public class MethodRenameVisitor implements Visitor {
 	public void visit(ClassDecl classDecl) {
 		for(MethodDecl mtd : classDecl.methoddecls()) {
 			if(containingClasses != null) {
-				if(mtd.name() == oldName && containingClasses.contains(classDecl.name())) {
+				if(mtd.name().equals(oldName) && containingClasses.contains(classDecl.name())) {
 					mtd.setName(newName);
 					mtd.accept(this);
 				}
 			}
-			else if(mtd.name() == oldName && mtd.lineNumber == this.lineNumber) {
-				bildClassList(classDecl);
+			else if(mtd.name().equals(oldName) && mtd.lineNumber == this.lineNumber) {
+				buildClassList(classDecl);
 				return;
 			}	
 		}	
@@ -204,15 +211,13 @@ public class MethodRenameVisitor implements Visitor {
 		case "ThisExpr":
 			className = e.getEnclosingScope().getParent().scopeName();
 			break;
-		
 		case "IdentifierExpr":
 			IdentifierExpr idf = (IdentifierExpr)e;
 			String varName = idf.id();
-			SymbolTable tbl = e.getEnclosingScope().findDeclTable(varName, this.forest);
-			VarDecl decl = (VarDecl) tbl.getDeclNode(varName);
+			SymbolTable tbl = STLookup.findDeclTable(varName, forest, e.getEnclosingScope(), programSymbolTable);
+			VarDecl decl = (VarDecl) STLookup.getDeclNode(tbl, varName);
 			className = varDeclToTypeName(decl);
 			break;
-			
 		case "NewObjectExpr":
 			NewObjectExpr newOb = (NewObjectExpr)e;
 			className = newOb.classId();

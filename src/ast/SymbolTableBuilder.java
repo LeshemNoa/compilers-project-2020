@@ -36,12 +36,10 @@ public class SymbolTableBuilder {
         List<MethodDecl> methods = classDecl.methoddecls();
         for (MethodDecl method : methods) {
             method.setEnclosingScope(classDeclST);
-            STSymbol methodSymbol = new STSymbol(method.name(), STSymbol.SymbolKind.METHOD, classDecl.name(), method);
-            classDeclST.addEntry(method.name(), methodSymbol);
             SymbolTable methodST = new SymbolTable(classDeclST, method.name());
-            method.setEnclosingScope(classDeclST);
-            classDeclST.addChildSymbolTable(methodST);
             addVariableSymbols(method, methodST);
+            STSymbol methodSymbol = new STSymbol(method.name(), STSymbol.SymbolKind.METHOD, classDecl.name(), method, methodST);
+            classDeclST.addEntry(method.name(), methodSymbol);
         }
     }
 
@@ -67,20 +65,20 @@ public class SymbolTableBuilder {
 
     /**
      * Putting everything together.
-     * Takes a program, and builds its symbol table
-     * as follows: the root ST has no entries, just child STs for each class declaration.
-     * Each class declaration has its own ST with its fields and methods as symbols, and with
-     * its methods' STs as children. Each method ST contains symbols for each of its variables.
+     * Takes a program, and builds its symbol table as follows:
+     * The root ST's entries have class names for keys and their corresponding STSymbols
+     * point to their enclosed scope's table.
+     * Each of the class tables has symbols for its fields and symbols for its methods, where
+     * the method symbols have a pointer to their own scope's symbol table.
      */
     private void buildProgramSymbolTable() {
-        MainClass mainClass = program.mainClass();
-        mainClass.setEnclosingScope(programSymTable);
         for (ClassDecl classdecl : program.classDecls()) {
             classdecl.setEnclosingScope(programSymTable);
             SymbolTable classDeclST = new SymbolTable(programSymTable, classdecl.name());
-            programSymTable.addChildSymbolTable(classDeclST);
-            addFieldSymbols(classdecl, classDeclST);
             addMethodSymbols(classdecl, classDeclST);
+            addFieldSymbols(classdecl, classDeclST);
+            STSymbol classDeclSymbol = new STSymbol(classdecl.name(), STSymbol.SymbolKind.CLASS_DECL, classdecl, classDeclST);
+            programSymTable.addEntry(classdecl.name(), classDeclSymbol);
         }
     }
 }

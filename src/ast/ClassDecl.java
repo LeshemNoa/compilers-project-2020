@@ -22,6 +22,11 @@ public class ClassDecl extends AstNode {
     public ClassDecl() {
     }
 
+    /**
+     * The class symbol table
+     */
+    private SymbolTable enclosedScope;
+
     public ClassDecl(String name, String superName, List<VarDecl> fields, List<MethodDecl> methoddecls) {
         super();
         this.name = name;
