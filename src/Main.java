@@ -47,14 +47,19 @@ public class Main {
                     boolean isMethod;
                     if (type.equals("var")) {
                         isMethod = false;
+                        VariableRenameVisitor v = new VariableRenameVisitor(originalName, newName, Integer.parseInt(originalLine));
+                        prog.accept(v);
+                        AstXMLSerializer xmlSerializer = new AstXMLSerializer();
+                        xmlSerializer.serialize(prog, outfilename);
                     } else if (type.equals("method")) {
                         isMethod = true;
+                        MethodRenameVisitor v = new MethodRenameVisitor(originalName, newName, Integer.parseInt(originalLine));
+                        prog.accept(v);
+                        AstXMLSerializer xmlSerializer = new AstXMLSerializer();
+                        xmlSerializer.serialize(prog, outfilename);
                     } else {
                         throw new IllegalArgumentException("unknown rename type " + type);
                     }
-
-                    throw new UnsupportedOperationException("TODO - Ex. 1");
-
                 } else {
                     throw new IllegalArgumentException("unknown command line action " + action);
                 }
