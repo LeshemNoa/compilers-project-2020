@@ -122,7 +122,9 @@ public class VariableRenameVisitor implements Visitor {
     }
 
     @Override
-    public void visit(FormalArg formalArg) {return;}
+    public void visit(FormalArg formalArg) {
+        formalArg.accept(this);
+    }
 
     @Override
     public void visit(VarDecl varDecl) {
@@ -162,6 +164,7 @@ public class VariableRenameVisitor implements Visitor {
         if (assignStatement.lv().equals(oldName)) {
             assignStatement.setLv(newName);
         }
+        assignStatement.rv().accept(this);
     }
 
     @Override
@@ -209,76 +212,84 @@ public class VariableRenameVisitor implements Visitor {
 
     @Override
     public void visit(ArrayAccessExpr e) {
-
+        e.arrayExpr().accept(this);
+        e.indexExpr().accept(this);
     }
 
     @Override
     public void visit(ArrayLengthExpr e) {
-
+        e.arrayExpr().accept(this);
     }
 
     @Override
     public void visit(MethodCallExpr e) {
-
+        e.ownerExpr().accept(this);
+        for(Expr expr: e.actuals()) {
+            expr.accept(this);
+        };
     }
 
     @Override
     public void visit(IntegerLiteralExpr e) {
-
+        return;
     }
 
     @Override
     public void visit(TrueExpr e) {
-
+        return;
     }
 
     @Override
     public void visit(FalseExpr e) {
-
+        return;
     }
 
     @Override
     public void visit(IdentifierExpr e) {
-
+        if (e.id().equals(oldName)) {
+            e.setId(newName);
+        }
     }
 
     @Override
     public void visit(ThisExpr e) {
-
+        return;
     }
 
     @Override
     public void visit(NewIntArrayExpr e) {
-
+        return;
     }
 
     @Override
     public void visit(NewObjectExpr e) {
-
+        return;
     }
 
     @Override
     public void visit(NotExpr e) {
-
+        e.e().accept(this);
     }
 
     @Override
     public void visit(IntAstType t) {
-
+        return;
     }
 
     @Override
     public void visit(BoolAstType t) {
-
+        return;
     }
 
     @Override
     public void visit(IntArrayAstType t) {
-
+        return;
     }
 
     @Override
     public void visit(RefType t) {
-
+        if (t.id().equals(oldName)) {
+            t.setId(newName);
+        }
     }
 };
