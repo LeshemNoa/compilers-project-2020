@@ -1,5 +1,6 @@
 package ast;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class VariableRenameVisitor implements Visitor {
@@ -37,6 +38,9 @@ public class VariableRenameVisitor implements Visitor {
             if (classST.contains(oldName) && classST.getSymbol(oldName).declaration().lineNumber == lineNumber) {
                 // List of class declaration which may (or may not) require changes during rename
                 List<ClassDecl> containingClasses = forest.getDescendants(classDecl);
+                if (containingClasses == null) {
+                    containingClasses = new ArrayList<ClassDecl>();
+                }
                 containingClasses.add(classDecl);
                 for (ClassDecl cls : containingClasses) {
                     cls.accept(this);
@@ -104,7 +108,7 @@ public class VariableRenameVisitor implements Visitor {
 
     @Override
     public void visit(MethodDecl methodDecl) {
-        String declaringClass = methodDecl.getEnclosingScope().scopeName();
+        String declaringClass = methodDecl.enclosingScope().scopeName();
         SymbolTable methodST = programST.getSymbol(declaringClass).enclosedScope();
         if (
                 (methodST.contains(oldName) && methodST.getSymbol(oldName).declaration().lineNumber == lineNumber)
@@ -121,21 +125,20 @@ public class VariableRenameVisitor implements Visitor {
         }
     }
 
-    private void visit(VariableIntroduction varIntro) {
-        if (varIntro.name().equals(oldName) && varIntro.lineNumber == lineNumber) {
-            varIntro.setName(newName);
-        }
-    }
 
     @Override
     public void visit(VarDecl varDecl) {
-        ((VariableIntroduction) varDecl).accept(this);
+        if (varDecl.name().equals(oldName) && varDecl.lineNumber == lineNumber) {
+            varDecl.setName(newName);
+        }
     }
 
 
     @Override
     public void visit(FormalArg formalArg) {
-        ((VariableIntroduction) formalArg).accept(this);
+        if (formalArg.name().equals(oldName) && formalArg.lineNumber == lineNumber) {
+            formalArg.setName(newName);
+        }
     }
 
 

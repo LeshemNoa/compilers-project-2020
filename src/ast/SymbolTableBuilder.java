@@ -54,11 +54,11 @@ public class SymbolTableBuilder {
         List<FormalArg> arguments = method.formals();
         for (VarDecl variable : variables) {
             variable.setEnclosingScope(methodST);
-            STSymbol variableSymbol = new STSymbol(variable.name(), STSymbol.SymbolKind.VAR, method.getEnclosingScope().scopeName(), variable);
+            STSymbol variableSymbol = new STSymbol(variable.name(), STSymbol.SymbolKind.VAR, method.enclosingScope().scopeName(), variable);
             methodST.addEntry(variable.name(), variableSymbol);
         }
         for (FormalArg arg : arguments) {
-            STSymbol argSymbol = new STSymbol(arg.name(), STSymbol.SymbolKind.VAR, method.getEnclosingScope().scopeName(), arg);
+            STSymbol argSymbol = new STSymbol(arg.name(), STSymbol.SymbolKind.VAR, method.enclosingScope().scopeName(), arg);
             methodST.addEntry(arg.name(), argSymbol);
         }
     }

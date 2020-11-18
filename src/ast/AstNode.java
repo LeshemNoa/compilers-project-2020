@@ -26,7 +26,7 @@ public abstract class AstNode {
         this.enclosingScope = enclosingScope;
     }
 
-    public SymbolTable getEnclosingScope() {
+    public SymbolTable enclosingScope() {
         return this.enclosingScope;
     }
 }

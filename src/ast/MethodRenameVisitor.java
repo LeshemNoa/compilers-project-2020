@@ -205,12 +205,12 @@ public class MethodRenameVisitor implements Visitor {
 		//switch case
 		switch (e.getClass().getName()) {
 		case "ThisExpr":
-			className = e.getEnclosingScope().getParent().scopeName();
+			className = e.enclosingScope().getParent().scopeName();
 			break;
 		case "IdentifierExpr":
 			IdentifierExpr idf = (IdentifierExpr)e;
 			String varName = idf.id();
-			SymbolTable tbl = STLookup.findDeclTable(varName, forest, e.getEnclosingScope(), programSymbolTable);
+			SymbolTable tbl = STLookup.findDeclTable(varName, forest, e.enclosingScope(), programSymbolTable);
 			VarDecl decl = (VarDecl) STLookup.getDeclNode(tbl, varName);
 			className = varDeclToTypeName(decl);
 			break;
