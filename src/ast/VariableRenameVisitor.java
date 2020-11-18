@@ -121,17 +121,23 @@ public class VariableRenameVisitor implements Visitor {
         }
     }
 
-    @Override
-    public void visit(FormalArg formalArg) {
-        formalArg.accept(this);
+    private void visit(VariableIntroduction varIntro) {
+        if (varIntro.name().equals(oldName) && varIntro.lineNumber == lineNumber) {
+            varIntro.setName(newName);
+        }
     }
 
     @Override
     public void visit(VarDecl varDecl) {
-        if (varDecl.name().equals(oldName) && varDecl.lineNumber == lineNumber) {
-            varDecl.setName(newName);
-        }
+        ((VariableIntroduction) varDecl).accept(this);
     }
+
+
+    @Override
+    public void visit(FormalArg formalArg) {
+        ((VariableIntroduction) formalArg).accept(this);
+    }
+
 
     @Override
     public void visit(BlockStatement blockStatement) {
