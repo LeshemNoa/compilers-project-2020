@@ -108,14 +108,14 @@ public class VariableRenameVisitor implements Visitor {
 
     @Override
     public void visit(MethodDecl methodDecl) {
-        String declaringClass = methodDecl.enclosingScope().scopeName();
-        SymbolTable methodST = programST.getSymbol(declaringClass).enclosedScope();
+        SymbolTable declaringClassST = methodDecl.enclosingScope();
+        SymbolTable methodST = declaringClassST.getSymbol(methodDecl.name()).enclosedScope();
         if (
                 (methodST.contains(oldName) && methodST.getSymbol(oldName).declaration().lineNumber == lineNumber)
                 || !methodST.contains(oldName)
         ) {
             if (methodST.contains(oldName)) {
-                VarDecl targetDecl = (VarDecl) methodST.getSymbol(oldName).declaration();
+                VariableIntroduction targetDecl = (VariableIntroduction) methodST.getSymbol(oldName).declaration();
                 targetDecl.accept(this);
             }
             List<Statement> body = methodDecl.body();
