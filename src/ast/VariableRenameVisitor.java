@@ -107,8 +107,32 @@ public class VariableRenameVisitor implements Visitor {
     }
 
     private void visit(Expr e){
-        //switch case
-        //cast to any expretion type that does work
+        switch(e.getClass().getName()){
+            case "BinaryExpr":
+                e = (BinaryExpr)e;
+                break;
+            case "ArrayAccessExpr":
+                e = (ArrayAccessExpr)e;
+                break;
+            case "ArrayLengthExpr":
+                e = (ArrayLengthExpr)e;
+                break;
+            case "MethodCallExpr":
+                e = (MethodCallExpr)e;
+                break;
+            case "NotExpr":
+                e = (NotExpr)e;
+                break;
+            case "IdentifierExpr":
+                e = (IdentifierExpr)e;
+                break;
+            case "RefType":
+                e = (RefType)e;
+                break;
+
+            default: //????
+        }
+        e.accept(this);
     }
 
     @Override
