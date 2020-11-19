@@ -126,9 +126,6 @@ public class VariableRenameVisitor implements Visitor {
             case "IdentifierExpr":
                 e = (IdentifierExpr)e;
                 break;
-            case "RefType":
-                e = (RefType)e;
-                break;
 
             default: //????
         }
