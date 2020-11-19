@@ -34,7 +34,7 @@ public class InheritanceForest {
 		void add(ClassDecl cls) {
 			node newHead = new node();
 			newHead.value = cls;
-			if(head != null) newHead.next = head.next;
+			newHead.next = this.head;
 			head = newHead;
 		}
 		
