@@ -106,6 +106,11 @@ public class VariableRenameVisitor implements Visitor {
         return;
     }
 
+    private void visit(Expr e){
+        //switch case
+        //cast to any expretion type that does work
+    }
+
     @Override
     public void visit(MethodDecl methodDecl) {
         SymbolTable declaringClassST = methodDecl.enclosingScope();
@@ -122,6 +127,7 @@ public class VariableRenameVisitor implements Visitor {
             for (Statement stmt : body) {
                 stmt.accept(this);
             }
+            methodDecl.ret().accept(this);
         }
     }
 

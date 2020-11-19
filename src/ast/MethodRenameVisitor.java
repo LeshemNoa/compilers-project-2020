@@ -98,13 +98,39 @@ public class MethodRenameVisitor implements Visitor {
 
 	}
 
+	private void visit(Expr e){
+		switch(e.getClass().getName()){
+			case "BinaryExpr":
+				e = (BinaryExpr)e;
+				break;
+			case "ArrayAccessExpr":
+				e = (ArrayAccessExpr)e;
+				break;
+			case "ArrayLengthExpr":
+				e = (ArrayLengthExpr)e;
+				break;
+			case "MethodCallExpr":
+				e = (MethodCallExpr)e;
+				break;
+			case "NotExpr":
+				e = (NotExpr)e;
+				break;
+			case "NewIntArrayExpr":
+				e = (NewIntArrayExpr)e;
+				break;
+
+			default: //????
+		}
+		e.accept(this);
+	}
+
 	@Override
 	public void visit(MethodDecl methodDecl) {
 
 		for(Statement statement : methodDecl.body()) {
 			statement.accept(this);
 		}
-		//methodDecl.ret().accept(this); casting?
+		methodDecl.ret().accept(this);
 
 	}
 
