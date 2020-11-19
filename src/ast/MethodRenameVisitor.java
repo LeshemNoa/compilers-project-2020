@@ -67,7 +67,9 @@ public class MethodRenameVisitor implements Visitor {
 		//now make the list
 		containingClasses = new HashSet<>();
 		containingClasses.add(cls.name());
-		for(ClassDecl descendantCls : forest.getDescendants(cls)) {
+		List<ClassDecl> Descendants = forest.getDescendants(cls);
+		if(Descendants == null) return;
+		for(ClassDecl descendantCls : Descendants) {
 			if(getMethodNames(descendantCls).contains(oldName)) {
 				containingClasses.add(descendantCls.name());
 			}
