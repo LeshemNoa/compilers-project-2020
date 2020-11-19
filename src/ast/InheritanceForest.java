@@ -141,7 +141,8 @@ public class InheritanceForest {
 	}
 	
 	public ClassDecl getSuper(String className) {
-		return nodeMap.get(className).value;
+		ForestNode node = nodeMap.get(className).superNode;
+		return node == null ? null : node.value;
 	}
 	
 	public ClassDecl nameToClassDecl(String name) {

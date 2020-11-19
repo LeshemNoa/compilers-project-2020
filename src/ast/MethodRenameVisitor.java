@@ -60,9 +60,13 @@ public class MethodRenameVisitor implements Visitor {
 		
 		//find oldest ancestor with this method
 		ClassDecl superClass = forest.nameToClassDecl(cls.superName());
-		while(superClass != null && getMethodNames(superClass).contains(oldName)) {
+		ClassDecl oldest = cls;
+		while(superClass != null) {
+			if(getMethodNames(superClass).contains(oldName)) oldest = superClass;
 			cls = superClass;
+			superClass = forest.getSuper(cls);
 		}
+		cls = oldest;
 		
 		//now make the list
 		containingClasses = new HashSet<>();
