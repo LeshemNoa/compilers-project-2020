@@ -148,7 +148,7 @@ public class VariableRenameVisitor implements Visitor {
             for (Statement stmt : body) {
                 stmt.accept(this);
             }
-            methodDecl.ret().accept(this);
+            this.visit(methodDecl.ret());
         }
     }
 

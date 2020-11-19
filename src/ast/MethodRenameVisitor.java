@@ -130,7 +130,7 @@ public class MethodRenameVisitor implements Visitor {
 		for(Statement statement : methodDecl.body()) {
 			statement.accept(this);
 		}
-		methodDecl.ret().accept(this);
+		this.visit(methodDecl.ret());
 
 	}
 
