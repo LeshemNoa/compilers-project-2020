@@ -73,11 +73,7 @@ public class MethodRenameVisitor implements Visitor {
 		containingClasses.add(cls.name());
 		List<ClassDecl> Descendants = forest.getDescendants(cls);
 		if(Descendants == null) return;
-		for(ClassDecl descendantCls : Descendants) {
-			if(getMethodNames(descendantCls).contains(oldName)) {
-				containingClasses.add(descendantCls.name());
-			}
-		}
+		for(ClassDecl descendantCls : Descendants) containingClasses.add(descendantCls.name());
 	}
 
 	@Override
@@ -104,7 +100,7 @@ public class MethodRenameVisitor implements Visitor {
 
 	private void visit(Expr e){
 		String classTypeName = e.getClass().getName();
-		String binars[] = {"ast.addExpr", "ast.andExpr", "ast.ltExpr", "ast.multExpr", "ast.subtractExpr"};
+		String binars[] = {"ast.AddExpr", "ast.AndExpr", "ast.LtExpr", "ast.MultExpr", "ast.SubtractExpr"};
 		if(Arrays.asList(binars).contains(classTypeName)){
 			((BinaryExpr)e).accept(this);
 			return;
@@ -234,7 +230,7 @@ public class MethodRenameVisitor implements Visitor {
 	 * a local variable, a field, a new A(), or this,
 	 * but more complex expressions for o are disallowed.
 	 */
-	
+
 	private boolean changeNeeded(Expr e) {
 		String className = "";
 		//switch case

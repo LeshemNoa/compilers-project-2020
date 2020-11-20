@@ -109,7 +109,7 @@ public class VariableRenameVisitor implements Visitor {
 
     private void visit(Expr e){
         String classTypeName = e.getClass().getName();
-        String binars[] = {"ast.addExpr", "ast.andExpr", "ast.ltExpr", "ast.multExpr", "ast.subtractExpr"};
+        String binars[] = {"ast.AddExpr", "ast.AndExpr", "ast.LtExpr", "ast.MultExpr", "ast.SubtractExpr"};
         if(Arrays.asList(binars).contains(classTypeName)){
             ((BinaryExpr)e).accept(this);
             return;
