@@ -2,7 +2,7 @@ package ast;
 
 import java.util.*;
 
-public class SymbolTableBuilder<pritave> {
+public class SymbolTableBuilder {
     Program program;
     SymbolTable programSymTable;
 

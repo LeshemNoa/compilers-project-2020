@@ -30,13 +30,13 @@ public class VariableRenameVisitor implements Visitor {
          * first find all suspected change locations
          */
         for (ClassDecl classDecl : program.classDecls()) {
-            SymbolTable classST = programST.getSymbol(classDecl.name()).enclosedScope();
+            SymbolTable classST = programST.getSymbol(classDecl.name(), false).enclosedScope();
             /**
              * Case 1: the var we change is a field in a class.
              * Then we need to look at all the descendants of ths declaring class
              * and change all references to this field.
              */
-            if (classST.contains(oldName) && classST.getSymbol(oldName).declaration().lineNumber == lineNumber) {
+            if (classST.contains(oldName, false) && classST.getSymbol(oldName, false).declaration().lineNumber == lineNumber) {
                 // List of class declaration which may (or may not) require changes during rename
                 List<ClassDecl> containingClasses = forest.getDescendants(classDecl);
                 if (containingClasses == null) {
@@ -56,8 +56,8 @@ public class VariableRenameVisitor implements Visitor {
              */
             List<MethodDecl> classMethods = classDecl.methoddecls();
             for (MethodDecl method : classMethods) {
-                SymbolTable methodST = classST.getSymbol(method.name()).enclosedScope();
-                if (methodST.contains(oldName) && methodST.getSymbol(oldName).declaration().lineNumber == lineNumber) {
+                SymbolTable methodST = classST.getSymbol(method.name(), true).enclosedScope();
+                if (methodST.contains(oldName, false) && methodST.getSymbol(oldName, false).declaration().lineNumber == lineNumber) {
                     method.accept(this);
                     return;
                 }
@@ -75,9 +75,9 @@ public class VariableRenameVisitor implements Visitor {
      */
     @Override
     public void visit(ClassDecl classDecl) {
-        SymbolTable classST = programST.getSymbol(classDecl.name()).enclosedScope();
-        if (classST.contains(oldName)) {
-            STSymbol fieldSymbol = classST.getSymbol(oldName);
+        SymbolTable classST = programST.getSymbol(classDecl.name(), false).enclosedScope();
+        if (classST.contains(oldName, false)) {
+            STSymbol fieldSymbol = classST.getSymbol(oldName, false);
             /**
              * if class declares this field, and its line number doesn't match the search query,
              * we conclude it's a descendant class of the original declarator which is hiding the field it inherited
@@ -85,7 +85,7 @@ public class VariableRenameVisitor implements Visitor {
              * case where we would like to proceed down the AST is the case where this is the original declarator.
              */
             if (fieldSymbol.kind() == STSymbol.SymbolKind.FIELD && fieldSymbol.declaration().lineNumber == lineNumber) {
-                VarDecl fieldDecl = (VarDecl) classST.getSymbol(oldName).declaration();
+                VarDecl fieldDecl = (VarDecl) classST.getSymbol(oldName, false).declaration();
                 fieldDecl.accept(this);
                 for (MethodDecl methodDecl: classDecl.methoddecls()) {
                     methodDecl.accept(this);
@@ -141,13 +141,13 @@ public class VariableRenameVisitor implements Visitor {
     @Override
     public void visit(MethodDecl methodDecl) {
         SymbolTable declaringClassST = methodDecl.enclosingScope();
-        SymbolTable methodST = declaringClassST.getSymbol(methodDecl.name()).enclosedScope();
+        SymbolTable methodST = declaringClassST.getSymbol(methodDecl.name(), true).enclosedScope();
         if (
-                (methodST.contains(oldName) && methodST.getSymbol(oldName).declaration().lineNumber == lineNumber)
-                || !methodST.contains(oldName)
+                (methodST.contains(oldName, false) && methodST.getSymbol(oldName, false).declaration().lineNumber == lineNumber)
+                || !methodST.contains(oldName, false)
         ) {
-            if (methodST.contains(oldName)) {
-                VariableIntroduction targetDecl = (VariableIntroduction) methodST.getSymbol(oldName).declaration();
+            if (methodST.contains(oldName, false)) {
+                VariableIntroduction targetDecl = (VariableIntroduction) methodST.getSymbol(oldName, false).declaration();
                 targetDecl.accept(this);
             }
             List<Statement> body = methodDecl.body();

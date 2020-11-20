@@ -6,6 +6,7 @@ public class SymbolTable {
 	
 	private String scopeName;
     private HashMap<String, STSymbol> entries;
+    private  HashMap<String, STSymbol> methodEntries;
     private SymbolTable parentSymbolTable;
 
     /**
@@ -26,24 +27,37 @@ public class SymbolTable {
 		this.scopeName = id;
         this.parentSymbolTable = parentST;
         this.entries = new HashMap<>();
+        this.methodEntries = new HashMap<>();
     }
     public void addEntry(String name, STSymbol symbol) {
-        this.entries.put(name, symbol);
+        if (symbol.kind() == STSymbol.SymbolKind.METHOD) {
+            this.methodEntries.put(name, symbol);
+        } else {
+            this.entries.put(name, symbol);
+        }
     }
     
     public String scopeName() {
     	return scopeName;
     }
 
-    protected boolean contains(String name) {
-    	return entries.containsKey(name);
+    protected boolean contains(String name, boolean isMethod) {
+        if (isMethod) {
+            return this.methodEntries.containsKey(name);
+        } else {
+            return this.entries.containsKey(name);
+        }
     }
 
     public SymbolTable getParent() {
         return this.parentSymbolTable;
     }
 
-    public STSymbol getSymbol(String name) {
-        return this.entries.get(name);
+    public STSymbol getSymbol(String name, boolean isMethod) {
+        if (isMethod) {
+            return this.methodEntries.get(name);
+        } else {
+            return this.entries.get(name);
+        }
     }
 }

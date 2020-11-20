@@ -7,12 +7,12 @@ public class STLookup {
      * or it could be a field in an ancestor class.
      */
     public static SymbolTable findDeclTable(String variable, InheritanceForest forest, SymbolTable enclosingScope, SymbolTable programST) {
-        if (enclosingScope.contains(variable)) return enclosingScope;
+        if (enclosingScope.contains(variable, false)) return enclosingScope;
         // the next line is based on the fact that the SymbolTable of a class has no parent
         SymbolTable res = enclosingScope.getParent(); // never null - it's a class ST
         String nm = res.scopeName();
         ClassDecl resClass = forest.nameToClassDecl(nm);
-        while(resClass != null && !res.contains(variable)) {
+        while(resClass != null && !res.contains(variable, false)) {
             resClass = forest.getSuper(resClass);
             res = classDeclToSymbolTable(resClass, programST);
         }
@@ -20,10 +20,13 @@ public class STLookup {
     }
 
     public static SymbolTable classDeclToSymbolTable(ClassDecl cls, SymbolTable programST) {
-    	return programST.getSymbol(cls.name()).enclosedScope();
+    	return programST.getSymbol(cls.name(), false).enclosedScope();
     }
 
+    /**
+     * Find the VariableIntro node declaring this variable name
+     */
     public static AstNode getDeclNode(SymbolTable scope, String varName) {
-        return scope.getSymbol(varName).declaration();
+        return scope.getSymbol(varName, false).declaration();
     }
 }
