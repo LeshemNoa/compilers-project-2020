@@ -130,6 +130,9 @@ public class VariableRenameVisitor implements Visitor {
             case "ast.NewIntArrayExpr":
                 ((NewIntArrayExpr)e).accept(this);
                 return;
+            case "ast.IdentifierExpr":
+                ((IdentifierExpr)e).accept(this);
+                return;
 
             default: //????
         }
