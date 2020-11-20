@@ -300,7 +300,8 @@ public class VariableRenameVisitor implements Visitor {
 
     @Override
     public void visit(NewIntArrayExpr e) {
-        return;
+
+        e.lengthExpr().accept(this);
     }
 
     @Override
