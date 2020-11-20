@@ -1,6 +1,7 @@
 package ast;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class VariableRenameVisitor implements Visitor {
@@ -107,29 +108,31 @@ public class VariableRenameVisitor implements Visitor {
     }
 
     private void visit(Expr e){
-        switch(e.getClass().getName()){
-            case "BinaryExpr":
-                e = (BinaryExpr)e;
-                break;
-            case "ArrayAccessExpr":
-                e = (ArrayAccessExpr)e;
-                break;
-            case "ArrayLengthExpr":
-                e = (ArrayLengthExpr)e;
-                break;
-            case "MethodCallExpr":
-                e = (MethodCallExpr)e;
-                break;
-            case "NotExpr":
-                e = (NotExpr)e;
-                break;
-            case "IdentifierExpr":
-                e = (IdentifierExpr)e;
-                break;
+        String classTypeName = e.getClass().getName();
+        String binars[] = {"ast.addExpr", "ast.andExpr", "ast.ltExpr", "ast.multExpr", "ast.subtractExpr"};
+        if(Arrays.asList(binars).contains(classTypeName)){
+            ((BinaryExpr)e).accept(this);
+            return;
+        }
+        switch(classTypeName){
+            case "ast.ArrayAccessExpr":
+                ((ArrayAccessExpr)e).accept(this);
+                return;
+            case "ast.ArrayLengthExpr":
+                ((ArrayLengthExpr)e).accept(this);
+                return;
+            case "ast.MethodCallExpr":
+                ((MethodCallExpr)e).accept(this);
+                return;
+            case "ast.NotExpr":
+                ((NotExpr)e).accept(this);
+                return;
+            case "ast.NewIntArrayExpr":
+                ((NewIntArrayExpr)e).accept(this);
+                return;
 
             default: //????
         }
-        e.accept(this);
     }
 
     @Override

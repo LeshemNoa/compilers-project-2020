@@ -103,29 +103,31 @@ public class MethodRenameVisitor implements Visitor {
 	}
 
 	private void visit(Expr e){
-		switch(e.getClass().getName()){
-			case "BinaryExpr":
-				e = (BinaryExpr)e;
-				break;
-			case "ArrayAccessExpr":
-				e = (ArrayAccessExpr)e;
-				break;
-			case "ArrayLengthExpr":
-				e = (ArrayLengthExpr)e;
-				break;
-			case "MethodCallExpr":
-				e = (MethodCallExpr)e;
-				break;
-			case "NotExpr":
-				e = (NotExpr)e;
-				break;
-			case "NewIntArrayExpr":
-				e = (NewIntArrayExpr)e;
-				break;
+		String classTypeName = e.getClass().getName();
+		String binars[] = {"ast.addExpr", "ast.andExpr", "ast.ltExpr", "ast.multExpr", "ast.subtractExpr"};
+		if(Arrays.asList(binars).contains(classTypeName)){
+			((BinaryExpr)e).accept(this);
+			return;
+		}
+		switch(classTypeName){
+			case "ast.ArrayAccessExpr":
+				((ArrayAccessExpr)e).accept(this);
+				return;
+			case "ast.ArrayLengthExpr":
+				((ArrayLengthExpr)e).accept(this);
+				return;
+			case "ast.MethodCallExpr":
+				((MethodCallExpr)e).accept(this);
+				return;
+			case "ast.NotExpr":
+				((NotExpr)e).accept(this);
+				return;
+			case "ast.NewIntArrayExpr":
+				((NewIntArrayExpr)e).accept(this);
+				return;
 
 			default: //????
 		}
-		e.accept(this);
 	}
 
 	@Override
@@ -237,17 +239,17 @@ public class MethodRenameVisitor implements Visitor {
 		String className = "";
 		//switch case
 		switch (e.getClass().getName()) {
-		case "ThisExpr":
+		case "ast.ThisExpr":
 			className = e.enclosingScope().getParent().scopeName();
 			break;
-		case "IdentifierExpr":
+		case "ast.IdentifierExpr":
 			IdentifierExpr idf = (IdentifierExpr)e;
 			String varName = idf.id();
 			SymbolTable tbl = STLookup.findDeclTable(varName, forest, e.enclosingScope(), programSymbolTable);
-			VarDecl decl = (VarDecl) STLookup.getDeclNode(tbl, varName);
+			VariableIntroduction decl = (VariableIntroduction) STLookup.getDeclNode(tbl, varName);
 			className = varDeclToTypeName(decl);
 			break;
-		case "NewObjectExpr":
+		case "ast.NewObjectExpr":
 			NewObjectExpr newOb = (NewObjectExpr)e;
 			className = newOb.classId();
 			break;
@@ -259,20 +261,20 @@ public class MethodRenameVisitor implements Visitor {
 		return containingClasses.contains(className);
 	}
 	
-	private String varDeclToTypeName(VarDecl decl){
+	private String varDeclToTypeName(VariableIntroduction decl){
 	
 		switch (decl.type().getClass().getName()){
 		
-			case("BoolAstType"):
+			case("ast.BoolAstType"):
 				return "boolean";
 			
-			case("IntAstType"):
+			case("ast.IntAstType"):
 				return "int";
 				
-			case("IntArrayAstType"):
+			case("ast.IntArrayAstType"):
 				return "intArray";
 				
-			case("RefType"):
+			case("ast.RefType"):
 				return ((RefType)(decl.type())).id();
 			
 			default:
@@ -287,7 +289,7 @@ public class MethodRenameVisitor implements Visitor {
 			expr.accept(this);
 		}
 		
-		if(e.methodId() != oldName) return;
+		if(!e.methodId().equals(oldName)) return;
 		
 		if(changeNeeded(e.ownerExpr())) e.setMethodId(newName);
 	}

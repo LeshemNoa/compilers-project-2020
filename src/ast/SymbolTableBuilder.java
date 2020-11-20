@@ -1,8 +1,8 @@
 package ast;
 
-import java.util.List;
+import java.util.*;
 
-public class SymbolTableBuilder {
+public class SymbolTableBuilder<pritave> {
     Program program;
     SymbolTable programSymTable;
 
@@ -61,7 +61,109 @@ public class SymbolTableBuilder {
             STSymbol argSymbol = new STSymbol(arg.name(), STSymbol.SymbolKind.VAR, method.enclosingScope().scopeName(), arg);
             methodST.addEntry(arg.name(), argSymbol);
         }
+        for(Statement statement : method.body()){
+            setEnclosingScopeForThisExpr(statement, methodST);
+        }
+        setEnclosingScopeForThisExpr(method.ret(), methodST);
     }
+
+
+    /**
+     * The next methods all named setEnclosingScopeForThisExpr, overloading each other,
+     * are all for finding potential ThisExpr in a given statement and setting its enclosing scope.
+     * This is needed for finding out which class a given ThisExpr is reffering to
+     */
+    private void setEnclosingScopeForThisExpr(Statement statement, SymbolTable methodST){
+        switch (statement.getClass().getName()){
+            case "ast.AssignArrayStatement":
+                setEnclosingScopeForThisExpr((AssignArrayStatement)statement, methodST);
+                break;
+            case "ast.AssignStatement":
+                setEnclosingScopeForThisExpr((AssignStatement)statement, methodST);
+                break;
+            case "ast.BlockStatement":
+                setEnclosingScopeForThisExpr((BlockStatement)statement, methodST);
+                break;
+            case "ast.IfStatement":
+                setEnclosingScopeForThisExpr((IfStatement)statement, methodST);
+                break;
+            case "ast.SysoutStatement":
+                setEnclosingScopeForThisExpr((SysoutStatement)statement, methodST);
+                break;
+            case "ast.WhileStatement":
+                setEnclosingScopeForThisExpr((WhileStatement)statement, methodST);
+                break;
+            default:
+                //error
+        }
+    }
+
+    private void setEnclosingScopeForThisExpr(AssignArrayStatement statement, SymbolTable methodST){
+        setEnclosingScopeForThisExpr(statement.rv(), methodST);
+        setEnclosingScopeForThisExpr(statement.index(), methodST);
+    }
+
+    private void setEnclosingScopeForThisExpr(AssignStatement statement, SymbolTable methodST){
+        setEnclosingScopeForThisExpr(statement.rv(), methodST);
+    }
+
+    private void setEnclosingScopeForThisExpr(BlockStatement statement, SymbolTable methodST){
+        for(Statement stmnt : statement.statements()){
+            setEnclosingScopeForThisExpr(stmnt, methodST);
+        }
+    }
+
+    private void setEnclosingScopeForThisExpr(IfStatement statement, SymbolTable methodST){
+        setEnclosingScopeForThisExpr(statement.cond(), methodST);
+        setEnclosingScopeForThisExpr(statement.thencase(), methodST);
+        setEnclosingScopeForThisExpr(statement.elsecase(), methodST);
+    }
+
+    private void setEnclosingScopeForThisExpr(SysoutStatement statement, SymbolTable methodST){
+        setEnclosingScopeForThisExpr(statement.arg(), methodST);
+    }
+
+    private void setEnclosingScopeForThisExpr(WhileStatement statement, SymbolTable methodST){
+        setEnclosingScopeForThisExpr(statement.cond(), methodST);
+        setEnclosingScopeForThisExpr(statement.body(), methodST);
+    }
+
+    private void setEnclosingScopeForThisExpr(Expr e, SymbolTable methodST){
+        String classTypeName = e.getClass().getName();
+        String binars[] = {"ast.AddExpr", "ast.AndExpr", "ast.LtExpr", "ast.MultExpr", "ast.SubtractExpr"};
+        if(Arrays.asList(binars).contains(classTypeName)){
+            setEnclosingScopeForThisExpr(((BinaryExpr)e).e1(), methodST);
+            setEnclosingScopeForThisExpr(((BinaryExpr)e).e2(), methodST);
+            return;
+        }
+        switch(classTypeName){
+            case "ast.ThisExpr":
+            case "ast.IdentifierExpr":
+                e.setEnclosingScope(methodST);
+                return;
+            case "ast.NewIntArrayExpr":
+                setEnclosingScopeForThisExpr(((NewIntArrayExpr)e).lengthExpr(), methodST);
+                return;
+            case "ast.ArrayLengthExpr":
+                setEnclosingScopeForThisExpr(((ArrayLengthExpr)e).arrayExpr(), methodST);
+                return;
+            case "ast.ArrayAccessExpr":
+                setEnclosingScopeForThisExpr(((ArrayAccessExpr)e).arrayExpr(), methodST);
+                setEnclosingScopeForThisExpr(((ArrayAccessExpr)e).indexExpr(), methodST);
+                return;
+            case "ast.MethodCallExpr":
+                setEnclosingScopeForThisExpr(((MethodCallExpr)e).ownerExpr(), methodST);
+                for(Expr ex : ((MethodCallExpr)e).actuals()){
+                    setEnclosingScopeForThisExpr(ex, methodST);
+                }
+                return;
+            case "ast.NotExpr":
+                setEnclosingScopeForThisExpr(((NotExpr)e).e(), methodST);
+                return;
+        }
+
+    }
+
 
     /**
      * Putting everything together.
