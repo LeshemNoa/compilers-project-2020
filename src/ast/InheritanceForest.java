@@ -149,7 +149,14 @@ public class InheritanceForest {
 		if(name == null) return null;
 		return nodeMap.get(name).value;
 	}
-	
+
+	public List<ClassDecl> getRoots(){
+		List<ClassDecl> res = new ArrayList<>();
+		for(ForestNode node : trees){
+			res.add(node.value);
+		}
+		return res;
+	}
 	
 	/*
 	 * Overloading with input type to be ClassDecl for conveniece
