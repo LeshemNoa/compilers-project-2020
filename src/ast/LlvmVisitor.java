@@ -76,7 +76,7 @@ public class LlvmVisitor implements Visitor{
             res.concat(",\n" + methodDeclToVtableElem((MethodDecl) methods.get(0).declaration(), classDecl.name()));
         }
 
-        return res.concat("]\n\n");
+        return res.concat("\n]\n\n");
     }
 
     private String methodDeclToVtableElem(MethodDecl methodDecl, String className){
@@ -85,7 +85,7 @@ public class LlvmVisitor implements Visitor{
         for(int i = 0; i < methodDecl.formals().size(); i++){
             res = res.concat(", " + getLlvmType(formals.get(i)));
         }
-        return res.concat(")* @" + className + "." + methodDecl.name() + " to i8*)\n");
+        return res.concat(")* @" + className + "." + methodDecl.name() + " to i8*)");
     }
 
     private String getLlvmType(VariableIntroduction varIntro){
