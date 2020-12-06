@@ -26,26 +26,16 @@ public class LlvmVisitor implements Visitor{
     private InheritanceForest forest;
     private SymbolTable programSymbolTable;
     private Map<String, List<STSymbol>> vtables;
+    private Map<String, List<STSymbol>> instanceTemplates;
     private int registerPerMethodCounter;
-    private Map<String, Integer> alocationSizeForClassInstance;
 
     public LlvmVisitor(Program program){
         LlvmProgram = "";
         forest = new InheritanceForest(program);
         programSymbolTable = new SymbolTable(program);
-        vtables = STLookup.getClassesAndMethodsForVtable(programSymbolTable, forest);
-
-        alocationSizeForClassInstance = new HashMap<>();
-        for(ClassDecl classDecl : program.classDecls()){
-            alocationSizeForClassInstance.put(classDecl.name(), getAlocationSize(classDecl));
-        }
-    }
-
-    private int getAlocationSize(ClassDecl classDecl){
-        //TODO
-        //this needs to be changed to a recursive function on trees because of inherited fields!!
-        /*find out how many int field, IntArray fields and their lengths, boolean fields and reference fields there are
-        * don't forget to add 8 for vtable pointer*/
+        List<Map<String, List<STSymbol>>> maps = STLookup.createProgramMaps(programSymbolTable, forest);
+        vtables = maps.get(0);
+        instanceTemplates = maps.get(1);
     }
 
     @Override
@@ -67,8 +57,41 @@ public class LlvmVisitor implements Visitor{
 
     private String generateVtable(ClassDecl classDecl){
         List<STSymbol> methods = this.vtables.get(classDecl.name());
-        //TODO
+        if(methods == null || methods.size() == 0) return "";
 
+        String res = "@." + classDecl.name() + "_vtable = global [" + methods.size() + " x i8*] [\n";
+
+        res = res.concat("\t" + methodDeclToVtableElem((MethodDecl) methods.get(0).declaration(), classDecl.name()));
+        for(int i = 1; i < methods.size(); i++){
+            res.concat(",\n\t" + methodDeclToVtableElem((MethodDecl) methods.get(0).declaration(), classDecl.name()));
+        }
+
+        return res.concat("\n]\n\n");
+    }
+
+    private String methodDeclToVtableElem(MethodDecl methodDecl, String className){
+        String res = "i8* bitcast (i32 (i8*";
+        List<FormalArg> formals = methodDecl.formals();
+        for(int i = 0; i < methodDecl.formals().size(); i++){
+            res = res.concat(", " + getLlvmType(formals.get(i)));
+        }
+        return res.concat(")* @" + className + "." + methodDecl.name() + " to i8*)");
+    }
+
+    private String getLlvmType(VariableIntroduction varIntro){
+        return getLlvmType(varIntro.type());
+    }
+
+    private String getLlvmType(AstType type){
+        String typeName = type.getClass().getName();
+        if(typeName.equals("IntAstType")) return "i32";
+        if(typeName.equals("IntArrayAstType")) return "i32*";
+        if(typeName.equals("BoolAstType")) return "i1";
+        if(typeName.equals("RefType")) return "i8*";
+        else{
+            System.out.println("problem in getLlvmType");
+            return null;
+        }
     }
 
     @Override
@@ -87,21 +110,41 @@ public class LlvmVisitor implements Visitor{
     @Override
     public void visit(MethodDecl methodDecl) {
         registerPerMethodCounter = 0;
+        String sinature = "define " + getLlvmType(methodDecl.returnType()) + " @";
+        sinature = sinature.concat(methodDecl.enclosingScope().scopeName() + "." + methodDecl.name() + "(i8* %this");
+        List<FormalArg> formals = methodDecl.formals();
+        for(int i = 0; i < formals.size(); i++){
+            sinature = sinature.concat(", " + getLlvmType(formals.get(i)) + " %." + formals.get(i).name());
+        }
+        LlvmProgram = LlvmProgram.concat(sinature.concat(") {\n"));
+
+        for(FormalArg formal : formals) formal.accept(this);
+        for(VarDecl varDecl : methodDecl.vardecls()) varDecl.accept(this);
+        for(int i = 0; i < methodDecl.body().size(); i++) methodDecl.body().get(i).accept(this);
+        methodDecl.ret().accept(this);
+
+        LlvmProgram = LlvmProgram.concat("}\n\n");
     }
 
     @Override
     public void visit(FormalArg formalArg) {
-
+        String name = formalArg.name();
+        String formalReg = "%." + name;
+        String type = getLlvmType(formalArg);
+        String declAndAssign = "\t%" + name + " = alloca " + type + "\n";
+        declAndAssign = declAndAssign.concat("\tstore " + type + " " + formalReg + ", " + type + "* %" + name + "\n");
+        LlvmProgram = LlvmProgram.concat(declAndAssign);
     }
 
     @Override
     public void visit(VarDecl varDecl) {
-
+        //note that this method would never be called on a class's field, only local var
+        LlvmProgram = LlvmProgram.concat("\t%" + varDecl.name() + " = alloca " + getLlvmType(varDecl) + "\n");
     }
 
     @Override
     public void visit(BlockStatement blockStatement) {
-
+        for(int i = 0; i < blockStatement.statements().size(); i++) blockStatement.statements().get(i).accept(this);
     }
 
     @Override
