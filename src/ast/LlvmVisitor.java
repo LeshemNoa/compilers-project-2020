@@ -26,26 +26,16 @@ public class LlvmVisitor implements Visitor{
     private InheritanceForest forest;
     private SymbolTable programSymbolTable;
     private Map<String, List<STSymbol>> vtables;
+    private Map<String, List<STSymbol>> instanceTemplates;
     private int registerPerMethodCounter;
-    private Map<String, Integer> alocationSizeForClassInstance;
 
     public LlvmVisitor(Program program){
         LlvmProgram = "";
         forest = new InheritanceForest(program);
         programSymbolTable = new SymbolTable(program);
-        vtables = STLookup.getClassesAndMethodsForVtable(programSymbolTable, forest);
-
-        alocationSizeForClassInstance = new HashMap<>();
-        for(ClassDecl classDecl : program.classDecls()){
-            alocationSizeForClassInstance.put(classDecl.name(), getAlocationSize(classDecl));
-        }
-    }
-
-    private int getAlocationSize(ClassDecl classDecl){
-        //TODO
-        //this needs to be changed to a recursive function on trees because of inherited fields!!
-        /*find out how many int field, IntArray fields and their lengths, boolean fields and reference fields there are
-        * don't forget to add 8 for vtable pointer*/
+        List<Map<String, List<STSymbol>>> maps = STLookup.createProgramMaps(programSymbolTable, forest);
+        vtables = maps.get(0);
+        instanceTemplates = maps.get(1);
     }
 
     @Override
