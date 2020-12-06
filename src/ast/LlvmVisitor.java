@@ -177,29 +177,95 @@ public class LlvmVisitor implements Visitor{
 
     }
 
+    /**
+     * after this function runs, the last line of code in LlvmProgram will be
+     * the assignment of the result of the operation into a register
+     * Note: this method is NOT meant to be used on AndExpr, that should implement a whole other thing
+     * @param e
+     * @param operation one of: add, sub, mul, icmp slt
+     */
+    private void binaryVisit(BinaryExpr e, String operation){
+        e.e1().accept(this);
+        String leftValue = exprToValue(e.e1());
+        e.e2().accept(this);
+        String rightValue = exprToValue(e.e1());
+        String codeLine = "\t%_" + (registerPerMethodCounter++) + " = " + operation + " i32 ";
+        codeLine = codeLine.concat(leftValue + ", " + rightValue + "\n");
+        LlvmProgram = LlvmProgram.concat(codeLine);
+    }
+
+    /**
+     * use this method when trying to find out what to write in order to access
+     * a value needed for the next line of llvm code
+     * The last thing called before this function must be e.accept(this)
+     * @param e one side of binary expression object
+     * @return the string of what to write in llvm
+     */
+    private String exprToValue(Expr e){
+        String type = e.getClass().getName();
+        if(type.equals("IntegerLiteralExpr")){
+            return String.valueOf(((IntegerLiteralExpr)e).num());
+        }
+        if(type.equals("TrueExpr")) return "1";
+        if(type.equals("FalseExpr")) return "0";
+        //now we assume that register %_registerPerMethodCounter - 1 holds the needed value
+        return "%_" + (registerPerMethodCounter - 1);
+    }
+
     @Override
     public void visit(LtExpr e) {
-
+        binaryVisit(e, "icmp slt");
     }
 
     @Override
     public void visit(AddExpr e) {
-
+        binaryVisit(e, "add");
     }
 
     @Override
     public void visit(SubtractExpr e) {
-
+        binaryVisit(e, "sub");
     }
 
     @Override
     public void visit(MultExpr e) {
-
+        binaryVisit(e, "mul");
     }
 
     @Override
     public void visit(ArrayAccessExpr e) {
+        //get pointer to array
+        e.arrayExpr().accept(this);
+        //now register number registerPerMethodCounter - 1 is the i8* pointer to the pointer to the array
+        String bitCast = "\t%_" + (registerPerMethodCounter++) + " = bitcast i8* %_";
+        bitCast = bitCast.concat((registerPerMethodCounter - 2) + " to i32**\n");
+        String loadPointer = "\t%_" + (registerPerMethodCounter++) + " = load i32*, i32** %_";
+        loadPointer = loadPointer.concat((registerPerMethodCounter - 2) + "\n");
+        LlvmProgram = LlvmProgram.concat(bitCast + loadPointer);
+        int arrayPointer = registerPerMethodCounter - 1;
 
+        //check if index is not out of bounds
+        e.indexExpr().accept(this);
+        String indexValue = exprToValue(e.indexExpr());
+        String getLengthCommand = "\t%_" + (registerPerMethodCounter++) + " = load i32, i32* ";
+        getLengthCommand = getLengthCommand.concat("%_" + arrayPointer + "\n");
+
+        String ltCommand = "\t%_" + (registerPerMethodCounter++) + " = icmp slt i32 ";
+        ltCommand = ltCommand.concat("%_" + (registerPerMethodCounter - 2) + ", " + indexValue + "\n");
+        //TODO implement after merge: throw oob
+        //also check for index < 0
+
+        //put value into register
+        String updateIndex = "\t%_" + (registerPerMethodCounter++) + " = add i32* " + indexValue + ", 1\n";
+        String getElem = "%_" + (registerPerMethodCounter++) + " = getelementptr i32, i32* %_" + arrayPointer;
+        getElem = getElem.concat(", i32 %_" + (registerPerMethodCounter - 2) + "\n");
+        getElem = getElem.concat("\t_%" + (registerPerMethodCounter++) + " = load i32, i32* %_");
+        getElem = getElem.concat((registerPerMethodCounter - 2) + "\n");
+
+        //update llvmProgram
+        LlvmProgram = LlvmProgram.concat(getLengthCommand + ltCommand);
+        //TODO make sure all is concatenated
+        LlvmProgram = LlvmProgram.concat(getElem);
     }
 
     @Override
