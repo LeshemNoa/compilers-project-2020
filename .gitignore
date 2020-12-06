@@ -35,3 +35,6 @@ local.properties
 
 # ignore auto-generated
 src/sym.java
+
+# ignore examples, tests etc
+examples
