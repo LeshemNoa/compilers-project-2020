@@ -67,8 +67,37 @@ public class LlvmVisitor implements Visitor{
 
     private String generateVtable(ClassDecl classDecl){
         List<STSymbol> methods = this.vtables.get(classDecl.name());
-        //TODO
+        if(methods == null || methods.size() == 0) return "";
 
+        String res = "@." + classDecl.name() + "_vtable = global [" + methods.size() + " x i8*] [\n";
+
+        res = res.concat(methodDeclToVtableElem((MethodDecl) methods.get(0).declaration(), classDecl.name()));
+        for(int i = 1; i < methods.size(); i++){
+            res.concat(",\n" + methodDeclToVtableElem((MethodDecl) methods.get(0).declaration(), classDecl.name()));
+        }
+
+        return res.concat("\n]\n\n");
+    }
+
+    private String methodDeclToVtableElem(MethodDecl methodDecl, String className){
+        String res = "i8* bitcast (i32 (i8*";
+        List<FormalArg> formals = methodDecl.formals();
+        for(int i = 0; i < methodDecl.formals().size(); i++){
+            res = res.concat(", " + getLlvmType(formals.get(i)));
+        }
+        return res.concat(")* @" + className + "." + methodDecl.name() + " to i8*)");
+    }
+
+    private String getLlvmType(VariableIntroduction varIntro){
+        String typeName = varIntro.type().getClass().getName();
+        if(typeName.equals("IntAstType")) return "i32";
+        if(typeName.equals("IntArrayAstType")) return "i32*";
+        if(typeName.equals("BoolAstType")) return "i1";
+        if(typeName.equals("RefType")) return "i8*";
+        else{
+            System.out.println("problem in getLlvmType");
+            return null;
+        }
     }
 
     @Override
