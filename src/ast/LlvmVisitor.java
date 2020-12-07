@@ -337,6 +337,27 @@ public class LlvmVisitor implements Visitor{
          */
         assignArrayStatement.index().accept(this);
         int indexReg = methodCurrRegIndex-1;
+
+        validateIndexArray(indexReg, assigneePtrReg);
+
+        // All ok, we can safely index the array now
+        LLVMProgram.append(String.format(
+                "arr_alloc%d:\n", methodCurrLabelIndex++
+        ));
+        LLVMProgram.append(String.format(
+                "\t%%_%d = add i32 %%%d, 1", methodCurrRegIndex++, indexReg
+        )); // indexReg value is now outdated.
+        LLVMProgram.append(String.format(
+                "\t%%_%d = getelementptr i32, i32* %%_%d, i32 %%_%d\n", methodCurrRegIndex, assigneePtrReg, methodCurrRegIndex-1
+        ));
+        int assignLocPtr = methodCurrRegIndex++;
+        assignArrayStatement.rv().accept(this);
+        LLVMProgram.append(String.format(
+                "\tstore i32 %%_%d, i32* %%_%d", methodCurrRegIndex-1, assignLocPtr
+        ));
+    }
+
+    private void validateIndexArray(int indexReg, int arrayPtrReg){
         // Check that the index is greater than zero
         LLVMProgram.append(String.format(
                 "\t%%_%d = icmp slt i32 %d, 0\n", methodCurrRegIndex++, indexReg
@@ -356,7 +377,7 @@ public class LlvmVisitor implements Visitor{
                 "arr_alloc%d:\n", methodCurrLabelIndex++
         ));
         LLVMProgram.append(String.format(
-                "\t%%_%d = getelementptr i32, i32* %%_%d, i32 0\n", methodCurrRegIndex++, assigneePtrReg
+                "\t%%_%d = getelementptr i32, i32* %%_%d, i32 0\n", methodCurrRegIndex++, arrayPtrReg
         ));
         LLVMProgram.append(String.format(
                 "\t%%_%d = load i32, i32* %%_%d\n", methodCurrRegIndex, methodCurrRegIndex-1
@@ -379,21 +400,7 @@ public class LlvmVisitor implements Visitor{
         LLVMProgram.append(String.format(
                 "\tcall void @throw_oob()\n\tbr label %%arr_alloc%d\n", methodCurrLabelIndex
         ));
-        // All ok, we can safely index the array now
-        LLVMProgram.append(String.format(
-                "arr_alloc%d:\n", methodCurrLabelIndex++
-        ));
-        LLVMProgram.append(String.format(
-                "\t%%_%d = add i32 %%%d, 1", methodCurrRegIndex++, indexReg
-        )); // indexReg value is now outdated.
-        LLVMProgram.append(String.format(
-                "\t%%_%d = getelementptr i32, i32* %%_%d, i32 %%_%d\n", methodCurrRegIndex, assigneePtrReg, methodCurrRegIndex-1
-        ));
-        int assignLocPtr = methodCurrRegIndex++;
-        assignArrayStatement.rv().accept(this);
-        LLVMProgram.append(String.format(
-                "\tstore i32 %%_%d, i32* %%_%d", methodCurrRegIndex-1, assignLocPtr
-        ));
+        //if we've reached this line of code, the index is legal
     }
 
     @Override
@@ -463,33 +470,28 @@ public class LlvmVisitor implements Visitor{
         //now register number methodCurrRegIndex - 1 is the i8* pointer to the pointer to the array
         String bitCast = "\t%_" + (methodCurrRegIndex++) + " = bitcast i8* %_";
         bitCast = bitCast.concat((methodCurrRegIndex - 2) + " to i32**\n");
+        int arrayPointerReg = methodCurrRegIndex;
         String loadPointer = "\t%_" + (methodCurrRegIndex++) + " = load i32*, i32** %_";
         loadPointer = loadPointer.concat((methodCurrRegIndex - 2) + "\n");
         LLVMProgram.append(bitCast + loadPointer);
-        int arrayPointer = methodCurrRegIndex - 1;
 
         //check if index is not out of bounds
         e.indexExpr().accept(this);
-        String indexValue = exprToValue(e.indexExpr());
-        String getLengthCommand = "\t%_" + (methodCurrRegIndex++) + " = load i32, i32* ";
-        getLengthCommand = getLengthCommand.concat("%_" + arrayPointer + "\n");
+        int indexReg = methodCurrRegIndex - 1;
+        validateIndexArray(indexReg, arrayPointerReg);
 
-        String ltCommand = "\t%_" + (methodCurrRegIndex++) + " = icmp slt i32 ";
-        ltCommand = ltCommand.concat("%_" + (methodCurrRegIndex - 2) + ", " + indexValue + "\n");
-        //TODO implement after merge: throw oob
-        //also check for index < 0
+        LLVMProgram.append(String.format(
+                "arr_alloc%d:\n", methodCurrLabelIndex++ //this is not an allocation but let's keep the inde validation intact
+        ));
 
         //put value into register
-        String updateIndex = "\t%_" + (methodCurrRegIndex++) + " = add i32* " + indexValue + ", 1\n";
-        StringBuilder getElem = new StringBuilder("%_" + (methodCurrRegIndex++) + " = getelementptr i32, i32* %_" + arrayPointer);
-        getElem.append(", i32 %_" + (methodCurrRegIndex - 2) + "\n");
-        getElem.append("\t_%" + (methodCurrRegIndex++) + " = load i32, i32* %_");
-        getElem.append((methodCurrRegIndex - 2) + "\n");
+        String updateIndex = String.format("\t%%_%d = add i32* %%_d, 1\n", methodCurrRegIndex++, indexReg);
+        StringBuilder getElem = new StringBuilder(String.format("%%_%d = getelementptr i32, i32* %%_%d",methodCurrRegIndex++ ,arrayPointerReg ));
+        getElem.append(String.format(", i32 %_\n", methodCurrRegIndex - 2));
+        getElem.append(String.format("\t%%_%d = load i32, i32* %%_", methodCurrRegIndex++));
+        getElem.append(String.format("%d\n", methodCurrRegIndex - 2));
 
-        //update llvmProgram
-        LLVMProgram.append(getLengthCommand + ltCommand);
-        //TODO make sure all is concatenated
-        LLVMProgram.append(getElem.toString());
+        LLVMProgram.append(updateIndex + getElem.toString());
     }
 
     @Override
