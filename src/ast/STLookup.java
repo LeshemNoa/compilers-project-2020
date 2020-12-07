@@ -141,9 +141,9 @@ public class STLookup {
 
     /**
      * Recursive function traverse the inheritance forest and populate the VT map and the instance map.
-     * @param classDecl     Current class declaration reached during traversal, class whose method list is created
+     * @param classDecl     Current class declaration reached during traversal, class whose method and field lists are created
      * @param forest        Inheritance forest for class hierarchy, for incremental construction of each class's
-     *                      method list, implementing prefixing
+     *                      method and field lists, implementing prefixing
      * @param VTMap         VT hash map into which the collected method list is added
      * @param instanceMap   VT hash map into which the collected field list is added
      */
@@ -171,6 +171,4 @@ public class STLookup {
             recPopulateMaps(child, prog, forest, VTMap, instanceMap);
         }
     }
-
-
 }
