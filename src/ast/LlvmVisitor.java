@@ -357,6 +357,12 @@ public class LlvmVisitor implements Visitor{
         ));
     }
 
+    /**
+     * if the index is valid than after this the array may be accessed as desired.
+     * if the index is not valid, there will be an oob thrown
+     * @param indexReg register that is holding the int representing the desired index
+     * @param arrayPtrReg pointer to int
+     */
     private void validateIndexArray(int indexReg, int arrayPtrReg){
         // Check that the index is greater than zero
         LLVMProgram.append(String.format(
@@ -468,12 +474,8 @@ public class LlvmVisitor implements Visitor{
         //get pointer to array
         e.arrayExpr().accept(this);
         //now register number methodCurrRegIndex - 1 is the i8* pointer to the pointer to the array
-        String bitCast = "\t%_" + (methodCurrRegIndex++) + " = bitcast i8* %_";
-        bitCast = bitCast.concat((methodCurrRegIndex - 2) + " to i32**\n");
-        int arrayPointerReg = methodCurrRegIndex;
-        String loadPointer = "\t%_" + (methodCurrRegIndex++) + " = load i32*, i32** %_";
-        loadPointer = loadPointer.concat((methodCurrRegIndex - 2) + "\n");
-        LLVMProgram.append(bitCast + loadPointer);
+
+        int arrayPointerReg = i8PointerToIntArrayPointer();
 
         //check if index is not out of bounds
         e.indexExpr().accept(this);
@@ -494,14 +496,74 @@ public class LlvmVisitor implements Visitor{
         LLVMProgram.append(updateIndex + getElem.toString());
     }
 
+    /**
+     * assuming that methodCurrRegIndex - 1 is holding the i8* that is a pointer to the i32* of the array,
+     * this puts the i32* in a register to be accesed
+     * @return the number of the register that is holding the i32* that is the array
+     */
+    private int i8PointerToIntArrayPointer(){
+        String bitCast = "\t%_" + (methodCurrRegIndex++) + " = bitcast i8* %_";
+        bitCast = bitCast.concat((methodCurrRegIndex - 2) + " to i32**\n");
+        int arrayPointerReg = methodCurrRegIndex;
+        String loadPointer = "\t%_" + (methodCurrRegIndex++) + " = load i32*, i32** %_";
+        loadPointer = loadPointer.concat((methodCurrRegIndex - 2) + "\n");
+        LLVMProgram.append(bitCast + loadPointer);
+        return arrayPointerReg;
+    }
+
     @Override
     public void visit(ArrayLengthExpr e) {
+        //get pointer to array
+        e.arrayExpr().accept(this);
 
+        int arrayPointerReg = i8PointerToIntArrayPointer();
+
+        LLVMProgram.append(String.format("\t%%_%d = load i32, i32* %%_%d\n", methodCurrRegIndex++, arrayPointerReg));
     }
 
     @Override
     public void visit(MethodCallExpr e) {
+        e.ownerExpr().accept(this);
+        //now reg number methodCurrRegIndex - 1 is holding the i8* to the object
+        int objectReg = methodCurrRegIndex;
+        //Now access the vtable
+        LLVMProgram.append(String.format("\t%%_%d = i8* %%_%d to i8***\n", methodCurrRegIndex++, methodCurrRegIndex - 1));
+        int vtableReg = methodCurrRegIndex;
+        LLVMProgram.append(String.format("\t%%_%d = load i8**, i8*** %%_%d\n", methodCurrRegIndex++, objectReg));
+        int methodIndex = getMethodIndexInVtable(e);
+        LLVMProgram.append(String.format(
+                "\t%%_%d = getelementptr i8*, i8** %%_%d, i32 %d\n", methodCurrRegIndex++, vtableReg, methodIndex));
+        //TODO
+        //put actuals into registers
+        //find out return type
+        //bitcast to function signature
+        //call function
 
+    }
+
+    private int getMethodIndexInVtable(MethodCallExpr e){
+        String classDeclName = findInvokingClassNameForMethodCall(e);
+        List<STSymbol> vt = vtables.get(classDeclName);
+        for(int i = 0; i < vt.size(); i++){
+            if(vt.get(i).name().equals(e.methodId())) return i;
+        }
+        //shouldn't reach this part ever
+        System.out.println("something went wrong in getting method index");
+        return -1;
+    }
+
+    private String findInvokingClassNameForMethodCall(MethodCallExpr e){
+        if(e.ownerExpr().getClass().getName().equals("ThisExpr")) return e.enclosingScope().getParent().scopeName();
+        if(e.ownerExpr().getClass().getName().equals("NewObjectExpr")){
+            NewObjectExpr owner = (NewObjectExpr)e.ownerExpr();
+            return owner.classId();
+        }
+        String ownerName = ((IdentifierExpr)e.ownerExpr()).id(); //only option left for owner is identifier
+        //find decelNode for owner
+        SymbolTable declTable = STLookup.findDeclTable(ownerName, forest, e.enclosingScope(), programSymbolTable);
+        VariableIntroduction decl = (VariableIntroduction) STLookup.getDeclNode(declTable, ownerName);
+        //declType must be RefType otherwise couldn't envoke a method call
+        return ((RefType)decl.type()).id();
     }
 
     @Override
