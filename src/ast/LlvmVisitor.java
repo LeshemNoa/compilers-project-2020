@@ -409,7 +409,26 @@ public class LlvmVisitor implements Visitor{
 
     @Override
     public void visit(AndExpr e) {
-
+        e.e1().accept(this);
+        String leftVal = exprToValue(e.e1());
+        int leftIsTrue = methodCurrLabelIndex++;
+        int endAnd = methodCurrLabelIndex++;
+        //if false jump to end_and
+        StringBuilder endE1 = new StringBuilder(String.format(
+                "\tbr i1 %s, label %%if%d, label %%end_and%d\n",
+                leftVal, leftIsTrue, endAnd));
+        endE1.append(String.format("if%d:\n", leftIsTrue));
+        LLVMProgram.append(endE1.toString());
+        //asses e2
+        e.e2().accept(this);
+        String rightVal = exprToValue(e.e2());
+        //jump to end_and
+        String endE2 = String.format("\tbr label %%end_and%d\n", endAnd);
+        //do and
+        /* notice that if e1 is false than rightVal could have garbage,
+         * but we don't care because leftVal has false so the and will be false*/
+        String endAndCommand = String.format("end_and%d:\n\t%%_%d = and i1 %s, %s\n", endAnd, leftVal, rightVal);
+        LLVMProgram.append(endE2.concat(endAndCommand));
     }
 
     /**
