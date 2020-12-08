@@ -607,7 +607,40 @@ public class LlvmVisitor implements Visitor{
 
     @Override
     public void visit(IdentifierExpr e) {
-
+        String id = e.id();
+        SymbolTable enclosingST = STLookup.findDeclTable(id, forest, e.enclosingScope(), programSymbolTable);
+        VariableIntroduction idIntro = (VariableIntroduction) enclosingST.getSymbol(id, false).declaration();
+        String idLLType = getLLVMType(idIntro);
+        /**
+         * Case 1: id is a local variable in the method
+         */
+        if (enclosingST.contains(id, false)) {
+            LLVMProgram.append(String.format(
+                    "\t%%_%d = load %s, %s* %%%s\n", methodCurrRegIndex, idLLType, idLLType, id
+            ));
+            return;
+        }
+        String enclosingClassName = enclosingST.getParent().scopeName();
+        List<STSymbol> classInstanceShape = instanceTemplates.get(enclosingClassName);
+        /**
+         * Case 2: id is a field of %this
+         */
+        if (classInstanceHasField(classInstanceShape, id)) {
+            int offset = calcFieldOffset(classInstanceShape, id);
+            int idPtrReg = methodCurrRegIndex;
+            LLVMProgram.append(String.format(
+                    "\t%%_%d = getelementptr i8, i8* %this, i32 %d\n", idPtrReg, offset
+            ));
+            methodCurrRegIndex++;
+            int idPtrRegPostCast = methodCurrRegIndex;
+            LLVMProgram.append(String.format(
+                    "\t%%_%d = bitcast i8* %%_%d to %s*\n", idPtrRegPostCast, idPtrReg, idLLType
+            ));
+            methodCurrRegIndex++;
+            LLVMProgram.append(String.format(
+                    "\t%%_%d = load %s, %s* %%_%d\n", methodCurrRegIndex, idLLType, idLLType, idPtrRegPostCast
+            ));
+        }
     }
 
     @Override
