@@ -322,7 +322,7 @@ public class LlvmVisitor implements Visitor{
             assigneePtrReg = methodCurrRegIndex;
             int offset = calcFieldOffset(classInstanceShape, assigneeName);
             LLVMProgram.append(String.format(
-                    "\t%%_%d = getelementptr i8, i8* %this, i32 %d\n", assigneePtrReg, offset
+                    "\t%%_%d = getelementptr i8, i8* %%this, i32 %d\n", assigneePtrReg, offset
             ));
             methodCurrRegIndex++;
             int assigneePtrRegPostCast = methodCurrRegIndex;
@@ -337,9 +337,7 @@ public class LlvmVisitor implements Visitor{
          */
         assignArrayStatement.index().accept(this);
         int indexReg = methodCurrRegIndex-1;
-
         validateIndexArray(indexReg, assigneePtrReg);
-
         // All ok, we can safely index the array now
         LLVMProgram.append(String.format(
                 "arr_alloc%d:\n", methodCurrLabelIndex++
@@ -426,9 +424,8 @@ public class LlvmVisitor implements Visitor{
         String leftValue = exprToValue(e.e1());
         e.e2().accept(this);
         String rightValue = exprToValue(e.e1());
-        String codeLine = "\t%_" + (methodCurrRegIndex++) + " = " + operation + " i32 ";
-        codeLine = codeLine.concat(leftValue + ", " + rightValue + "\n");
-        LLVMProgram.append(codeLine);
+        LLVMProgram.append(String.format(
+                "\t%%_%d = %s i32 %s, %s", methodCurrRegIndex++, operation, leftValue, rightValue));
     }
 
     /**
