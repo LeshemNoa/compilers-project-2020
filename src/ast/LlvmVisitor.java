@@ -641,7 +641,21 @@ public class LlvmVisitor implements Visitor{
 
     @Override
     public void visit(NewObjectExpr e) {
-
+        int allocationSize = 8;
+        for(STSymbol symbol : instanceTemplates.get(e.classId())){
+            allocationSize += getSizeInBytes(symbol);
+        }
+        int objectAdressReg = methodCurrRegIndex++;
+        String allocate = String.format("\t%%_%d = call i8* @calloc(i32 1, i32 %d)", objectAdressReg, allocationSize);
+        int castedI8Pointer = methodCurrRegIndex++;
+        String bitcast = String.format("\t%%_%d = bitcast i8* %%_d to i8***\n", castedI8Pointer, objectAdressReg);
+        int vtableAddress = methodCurrRegIndex++;
+        int vtableSize = vtables.get(e.classId()).size();
+        String getVtable = String.format("\t%%_%d = getelementptr [%d x i8*], [%d x i8*]* @.%s_vtable, i32 0, i32 0\n",
+                vtableAddress, vtableSize, vtableSize, e.classId());
+        String storeVtable = String.format("\tstore i8** %%_%d, i8*** %%_%d\n", vtableAddress, castedI8Pointer);
+        LLVMProgram.append(allocate + bitcast + getVtable + storeVtable);
+        //memset to 0?
     }
 
     @Override
