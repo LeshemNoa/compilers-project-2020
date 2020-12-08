@@ -483,17 +483,18 @@ public class LlvmVisitor implements Visitor{
         validateIndexArray(indexReg, arrayPointerReg);
 
         LLVMProgram.append(String.format(
-                "arr_alloc%d:\n", methodCurrLabelIndex++ //this is not an allocation but let's keep the inde validation intact
+                "arr_alloc%d:\n", methodCurrLabelIndex++ //this is not an allocation but let's keep the index validation intact
         ));
 
         //put value into register
         String updateIndex = String.format("\t%%_%d = add i32* %%_d, 1\n", methodCurrRegIndex++, indexReg);
-        StringBuilder getElem = new StringBuilder(String.format("%%_%d = getelementptr i32, i32* %%_%d",methodCurrRegIndex++ ,arrayPointerReg ));
-        getElem.append(String.format(", i32 %_\n", methodCurrRegIndex - 2));
-        getElem.append(String.format("\t%%_%d = load i32, i32* %%_", methodCurrRegIndex++));
-        getElem.append(String.format("%d\n", methodCurrRegIndex - 2));
+        StringBuilder getElem = new StringBuilder(String.format(
+                "%%_%d = getelementptr i32, i32* %%_%d, i32 %%_%d\n", methodCurrRegIndex, arrayPointerReg, methodCurrRegIndex-1));
+        methodCurrRegIndex++;
+        getElem.append(String.format("\t%%_%d = load i32, i32* %%_%d\n", methodCurrRegIndex, methodCurrRegIndex-1));
+        methodCurrRegIndex++;
 
-        LLVMProgram.append(updateIndex + getElem.toString());
+        LLVMProgram.append(updateIndex).append(getElem.toString());
     }
 
     /**
