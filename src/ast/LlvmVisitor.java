@@ -533,12 +533,38 @@ public class LlvmVisitor implements Visitor{
         int methodIndex = getMethodIndexInVtable(e);
         LLVMProgram.append(String.format(
                 "\t%%_%d = getelementptr i8*, i8** %%_%d, i32 %d\n", methodCurrRegIndex++, vtableReg, methodIndex));
-        //TODO
+        int methodReg = methodCurrRegIndex;
+        LLVMProgram.append(String.format(
+                "\t%%_%d = load i8*, i8** %%_%d\n", methodCurrRegIndex++, methodCurrRegIndex - 1));
         //put actuals into registers
+        int numberOfActuals = e.actuals().size();
+        List<String> actualsString = new ArrayList<>(numberOfActuals);
+        for(int i = 0; i < e.actuals().size(); i++){
+            Expr actual = e.actuals().get(i);
+            actual.accept(this);
+            actualsString.add(i, exprToValue(actual));
+        }
         //find out return type
+        String invokerClass = findInvokingClassNameForMethodCall(e);
+        MethodDecl methodDecl = (MethodDecl) vtables.get(invokerClass).get(methodIndex).declaration();
+        String returnType = getLLVMType(methodDecl.returnType());
         //bitcast to function signature
+        StringBuilder castToSignature = new StringBuilder();
+        castToSignature.append(String.format("\t%%_%d = bitcast i8* %%_%d to %s (i8*", methodCurrRegIndex++, methodReg, returnType));
+        List<FormalArg> formals = methodDecl.formals();
+        for(FormalArg formal : formals){
+            castToSignature.append(String.format(", %s", getLLVMType(formal.type())));
+        }
+        castToSignature.append(")*\n");
+        LLVMProgram.append(castToSignature.toString());
         //call function
-
+        StringBuilder callCommand = new StringBuilder(String.format(
+                "\t%%_%d = call %s %%_%d(i8* %%this", methodCurrRegIndex++, returnType, methodCurrRegIndex - 1));
+        for(int i = 0; i < actualsString.size(); i++){
+            callCommand.append(String.format(", %s %s", getLLVMType(formals.get(i).type()), actualsString.get(i)));
+        }
+        callCommand.append(")\n");
+        LLVMProgram.append(callCommand);
     }
 
     private int getMethodIndexInVtable(MethodCallExpr e){
