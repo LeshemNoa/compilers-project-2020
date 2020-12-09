@@ -576,7 +576,7 @@ public class LlvmVisitor implements Visitor{
         LLVMProgram.append(castToSignature.toString());
         //call function
         StringBuilder callCommand = new StringBuilder(String.format(
-                "\t%%_%d = call %s %%_%d(i8* %%_d", methodCurrRegIndex++, returnType, methodCurrRegIndex - 1, ownerReg));
+                "\t%%_%d = call %s %%_%d(i8* %%_%d", methodCurrRegIndex++, returnType, methodCurrRegIndex - 1, ownerReg));
         for(int i = 0; i < actualsString.size(); i++){
             callCommand.append(String.format(", %s %s", getLLVMType(formals.get(i).type()), actualsString.get(i)));
         }
