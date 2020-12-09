@@ -542,11 +542,11 @@ public class LlvmVisitor implements Visitor{
     public void visit(MethodCallExpr e) {
         e.ownerExpr().accept(this);
         //now reg number methodCurrRegIndex - 1 is holding the i8* to the object
-        int objectReg = methodCurrRegIndex;
+        int ownerReg = methodCurrRegIndex;
         //Now access the vtable
         LLVMProgram.append(String.format("\t%%_%d = i8* %%_%d to i8***\n", methodCurrRegIndex++, methodCurrRegIndex - 1));
         int vtableReg = methodCurrRegIndex;
-        LLVMProgram.append(String.format("\t%%_%d = load i8**, i8*** %%_%d\n", methodCurrRegIndex++, objectReg));
+        LLVMProgram.append(String.format("\t%%_%d = load i8**, i8*** %%_%d\n", methodCurrRegIndex++, ownerReg));
         int methodIndex = getMethodIndexInVtable(e);
         LLVMProgram.append(String.format(
                 "\t%%_%d = getelementptr i8*, i8** %%_%d, i32 %d\n", methodCurrRegIndex++, vtableReg, methodIndex));
@@ -576,7 +576,7 @@ public class LlvmVisitor implements Visitor{
         LLVMProgram.append(castToSignature.toString());
         //call function
         StringBuilder callCommand = new StringBuilder(String.format(
-                "\t%%_%d = call %s %%_%d(i8* %%this", methodCurrRegIndex++, returnType, methodCurrRegIndex - 1));
+                "\t%%_%d = call %s %%_%d(i8* %%_d", methodCurrRegIndex++, returnType, methodCurrRegIndex - 1, ownerReg));
         for(int i = 0; i < actualsString.size(); i++){
             callCommand.append(String.format(", %s %s", getLLVMType(formals.get(i).type()), actualsString.get(i)));
         }
