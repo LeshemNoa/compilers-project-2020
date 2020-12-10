@@ -409,7 +409,26 @@ public class LlvmVisitor implements Visitor{
 
     @Override
     public void visit(AndExpr e) {
-
+        e.e1().accept(this);
+        String leftVal = exprToValue(e.e1());
+        int leftIsTrue = methodCurrLabelIndex++;
+        int endAnd = methodCurrLabelIndex++;
+        //if false jump to end_and
+        StringBuilder endE1 = new StringBuilder(String.format(
+                "\tbr i1 %s, label %%if%d, label %%end_and%d\n",
+                leftVal, leftIsTrue, endAnd));
+        endE1.append(String.format("if%d:\n", leftIsTrue));
+        LLVMProgram.append(endE1.toString());
+        //asses e2
+        e.e2().accept(this);
+        String rightVal = exprToValue(e.e2());
+        //jump to end_and
+        String endE2 = String.format("\tbr label %%end_and%d\n", endAnd);
+        //do and
+        /* notice that if e1 is false than rightVal could have garbage,
+         * but we don't care because leftVal has false so the and will be false*/
+        String endAndCommand = String.format("end_and%d:\n\t%%_%d = and i1 %s, %s\n", endAnd, leftVal, rightVal);
+        LLVMProgram.append(endE2.concat(endAndCommand));
     }
 
     /**
@@ -523,11 +542,11 @@ public class LlvmVisitor implements Visitor{
     public void visit(MethodCallExpr e) {
         e.ownerExpr().accept(this);
         //now reg number methodCurrRegIndex - 1 is holding the i8* to the object
-        int objectReg = methodCurrRegIndex;
+        int ownerReg = methodCurrRegIndex;
         //Now access the vtable
-        LLVMProgram.append(String.format("\t%%_%d = i8* %%_%d to i8***\n", methodCurrRegIndex++, methodCurrRegIndex - 1));
+        LLVMProgram.append(String.format("\t%%_%d = bitcast i8* %%_%d to i8***\n", methodCurrRegIndex++, methodCurrRegIndex - 1));
         int vtableReg = methodCurrRegIndex;
-        LLVMProgram.append(String.format("\t%%_%d = load i8**, i8*** %%_%d\n", methodCurrRegIndex++, objectReg));
+        LLVMProgram.append(String.format("\t%%_%d = load i8**, i8*** %%_%d\n", methodCurrRegIndex++, ownerReg));
         int methodIndex = getMethodIndexInVtable(e);
         LLVMProgram.append(String.format(
                 "\t%%_%d = getelementptr i8*, i8** %%_%d, i32 %d\n", methodCurrRegIndex++, vtableReg, methodIndex));
@@ -557,7 +576,7 @@ public class LlvmVisitor implements Visitor{
         LLVMProgram.append(castToSignature.toString());
         //call function
         StringBuilder callCommand = new StringBuilder(String.format(
-                "\t%%_%d = call %s %%_%d(i8* %%this", methodCurrRegIndex++, returnType, methodCurrRegIndex - 1));
+                "\t%%_%d = call %s %%_%d(i8* %%_%d", methodCurrRegIndex++, returnType, methodCurrRegIndex - 1, ownerReg));
         for(int i = 0; i < actualsString.size(); i++){
             callCommand.append(String.format(", %s %s", getLLVMType(formals.get(i).type()), actualsString.get(i)));
         }
@@ -645,22 +664,55 @@ public class LlvmVisitor implements Visitor{
 
     @Override
     public void visit(ThisExpr e) {
-
+        LLVMProgram.append(String.format("\t%%_%d = i8* %%this\n", methodCurrRegIndex++));
+        //is this legal in llvm? do we need to change it to add i8* %this, 0?
     }
 
     @Override
     public void visit(NewIntArrayExpr e) {
-
+        e.lengthExpr().accept(this);
+        String arraySize = exprToValue(e.lengthExpr());
+        //check if size is >= 0, if not throw oob or something
+        String compareSize = String.format("\t%%_%d = icmp slt i32 %s, 0\n", arraySize);
+        String branch = String.format("\tbr i1 %%_%d, label %alloc_arr%d, label %alloc_arr%d\n",
+                methodCurrRegIndex - 1, methodCurrLabelIndex, methodCurrLabelIndex + 1);
+        String oob = String.format("alloc_arr%d:\n\tcall void @throw_oob()\n\tbr label %%alloc_arr%d\nalloc_arr%d:\n",
+                methodCurrLabelIndex, methodCurrLabelIndex + 1, methodCurrLabelIndex + 1);
+        methodCurrLabelIndex += 2;
+        //size is good
+        int actualSize = methodCurrRegIndex;
+        String updateSize = String.format("\t%%_%d = add i32 %s, 1\n",methodCurrRegIndex++, arraySize);
+        String allocate = String.format("\t%%_%d = call i8* @calloc(i32 4, i32 %%_%d)\n", methodCurrRegIndex++, methodCurrRegIndex - 1);
+        int arrayReg = methodCurrRegIndex;
+        String bitcast = String.format("\t%%_%d = bitcast i8* %d to i32*\n",methodCurrRegIndex++, methodCurrRegIndex - 1);
+        String inputSize = String.format("\tstore i32 %%_%d, i32* %%_%d\n", actualSize, arrayReg);
+        LLVMProgram.append(compareSize + branch + oob + updateSize + allocate + bitcast + inputSize);
     }
 
     @Override
     public void visit(NewObjectExpr e) {
-
+        int allocationSize = 8;
+        for(STSymbol symbol : instanceTemplates.get(e.classId())){
+            allocationSize += getSizeInBytes(symbol);
+        }
+        int objectAdressReg = methodCurrRegIndex++;
+        String allocate = String.format("\t%%_%d = call i8* @calloc(i32 1, i32 %d)", objectAdressReg, allocationSize);
+        int castedI8Pointer = methodCurrRegIndex++;
+        String bitcast = String.format("\t%%_%d = bitcast i8* %%_d to i8***\n", castedI8Pointer, objectAdressReg);
+        int vtableAddress = methodCurrRegIndex++;
+        int vtableSize = vtables.get(e.classId()).size();
+        String getVtable = String.format("\t%%_%d = getelementptr [%d x i8*], [%d x i8*]* @.%s_vtable, i32 0, i32 0\n",
+                vtableAddress, vtableSize, vtableSize, e.classId());
+        String storeVtable = String.format("\tstore i8** %%_%d, i8*** %%_%d\n", vtableAddress, castedI8Pointer);
+        LLVMProgram.append(allocate + bitcast + getVtable + storeVtable);
+        //memset to 0?
     }
 
     @Override
     public void visit(NotExpr e) {
-
+        e.e().accept(this);
+        String eVal = exprToValue(e.e());
+        LLVMProgram.append(String.format("\t%%_%d = sub i1 1, %s\n", methodCurrRegIndex++, eVal));
     }
 
     @Override
