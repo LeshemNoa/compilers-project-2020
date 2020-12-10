@@ -36,8 +36,12 @@ public class Main {
                     throw new UnsupportedOperationException("TODO - Ex. 3");
 
                 } else if (action.equals("compile")) {
-                    throw new UnsupportedOperationException("TODO - Ex. 2");
-
+                    LLVMVisitor v = new LLVMVisitor(prog);
+                    prog.accept(v);
+                    PrintWriter out = new PrintWriter(outfilename);
+                    String output = v.getLLVMProgram();
+                    out.print(output);
+                    out.close();
                 } else if (action.equals("rename")) {
                     var type = args[2];
                     var originalName = args[3];

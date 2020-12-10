@@ -58,15 +58,16 @@ public class SymbolTableBuilder {
             methodST.addEntry(variable.name(), variableSymbol);
         }
         for (FormalArg arg : arguments) {
+            arg.setEnclosingScope(methodST);
             STSymbol argSymbol = new STSymbol(arg.name(), STSymbol.SymbolKind.VAR, method.enclosingScope().scopeName(), arg);
             methodST.addEntry(arg.name(), argSymbol);
         }
         for(Statement statement : method.body()){
+//            statement.setEnclosingScope(methodST);
             setEnclosingScopeForThisExpr(statement, methodST);
         }
         setEnclosingScopeForThisExpr(method.ret(), methodST);
     }
-
 
     /**
      * The next methods all named setEnclosingScopeForThisExpr, overloading each other,
@@ -74,6 +75,7 @@ public class SymbolTableBuilder {
      * This is needed for finding out which class a given ThisExpr is reffering to
      */
     private void setEnclosingScopeForThisExpr(Statement statement, SymbolTable methodST){
+        statement.setEnclosingScope(methodST);
         switch (statement.getClass().getName()){
             case "ast.AssignArrayStatement":
                 setEnclosingScopeForThisExpr((AssignArrayStatement)statement, methodST);
@@ -129,6 +131,7 @@ public class SymbolTableBuilder {
     }
 
     private void setEnclosingScopeForThisExpr(Expr e, SymbolTable methodST){
+        e.setEnclosingScope(methodST);
         String classTypeName = e.getClass().getName();
         String binars[] = {"ast.AddExpr", "ast.AndExpr", "ast.LtExpr", "ast.MultExpr", "ast.SubtractExpr"};
         if(Arrays.asList(binars).contains(classTypeName)){
@@ -139,7 +142,6 @@ public class SymbolTableBuilder {
         switch(classTypeName){
             case "ast.ThisExpr":
             case "ast.IdentifierExpr":
-                e.setEnclosingScope(methodST);
                 return;
             case "ast.NewIntArrayExpr":
                 setEnclosingScopeForThisExpr(((NewIntArrayExpr)e).lengthExpr(), methodST);
