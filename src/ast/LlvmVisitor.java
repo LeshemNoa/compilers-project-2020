@@ -408,23 +408,23 @@ public class LlvmVisitor implements Visitor{
     @Override
     public void visit(AndExpr e) {
         e.e1().accept(this);
-        String leftVal = exprToValue(e.e1());
+        int leftValReg = methodCurrRegIndex-1;
         int leftIsTrue = methodCurrLabelIndex++;
         int endAnd = methodCurrLabelIndex++;
         //if false jump to end_and
         String endE1 = String.format(
-                "\tbr i1 %s, label %%if%d, label %%end_and%d\n",
-                leftVal, leftIsTrue, endAnd) + String.format("if%d:\n", leftIsTrue);
+                "\tbr i1 %%_%d, label %%if%d, label %%end_and%d\n",
+                leftValReg, leftIsTrue, endAnd) + String.format("if%d:\n", leftIsTrue);
         LLVMProgram.append(endE1);
         //asses e2
         e.e2().accept(this);
-        String rightVal = exprToValue(e.e2());
+        int rightValReg = methodCurrRegIndex-1;
         //jump to end_and
         String endE2 = String.format("\tbr label %%end_and%d\n", endAnd);
         //do and
         /* notice that if e1 is false than rightVal could have garbage,
          * but we don't care because leftVal has false so the and will be false*/
-        String endAndCommand = String.format("end_and%d:\n\t%%_%d = and i1 %s, %s\n", methodCurrLabelIndex++, endAnd, leftVal, rightVal);
+        String endAndCommand = String.format("end_and%d:\n\t%%_%d = and i1 %%_%d, %%_%d\n", methodCurrLabelIndex++, endAnd, leftValReg, rightValReg);
         LLVMProgram.append(endE2.concat(endAndCommand));
     }
 
@@ -437,29 +437,11 @@ public class LlvmVisitor implements Visitor{
      */
     private void binaryVisit(BinaryExpr e, String operation){
         e.e1().accept(this);
-        String leftValue = exprToValue(e.e1());
+        int leftValueReg = methodCurrRegIndex-1;
         e.e2().accept(this);
-        String rightValue = exprToValue(e.e1());
+        int rightValueReg = methodCurrRegIndex-1;
         LLVMProgram.append(String.format(
-                "\t%%_%d = %s i32 %s, %s", methodCurrRegIndex++, operation, leftValue, rightValue));
-    }
-
-    /**
-     * use this method when trying to find out what to write in order to access
-     * a value needed for the next line of llvm code
-     * The last thing called before this function must be e.accept(this)
-     * @param e one side of binary expression object
-     * @return the string of what to write in llvm
-     */
-    private String exprToValue(Expr e){
-        String type = e.getClass().getName();
-        if(type.equals("IntegerLiteralExpr")){
-            return String.valueOf(((IntegerLiteralExpr)e).num());
-        }
-        if(type.equals("TrueExpr")) return "1";
-        if(type.equals("FalseExpr")) return "0";
-        //now we assume that register %_methodCurrRegIndex - 1 holds the needed value
-        return "%_" + (methodCurrRegIndex - 1);
+                "\t%%_%d = %s i32 %%_%d, %%_%d", methodCurrRegIndex++, operation, leftValueReg, rightValueReg));
     }
 
     @Override
@@ -552,11 +534,11 @@ public class LlvmVisitor implements Visitor{
                 "\t%%_%d = load i8*, i8** %%_%d\n", methodCurrRegIndex++, methodCurrRegIndex - 1));
         //put actuals into registers
         int numberOfActuals = e.actuals().size();
-        List<String> actualsString = new ArrayList<>(numberOfActuals);
+        List<Integer> actualsRegs = new ArrayList<>(numberOfActuals);
         for(int i = 0; i < e.actuals().size(); i++){
             Expr actual = e.actuals().get(i);
             actual.accept(this);
-            actualsString.add(i, exprToValue(actual));
+            actualsRegs.add(i, methodCurrRegIndex-1);
         }
         //find out return type
         String invokerClass = findInvokingClassNameForMethodCall(e);
@@ -574,8 +556,8 @@ public class LlvmVisitor implements Visitor{
         //call function
         StringBuilder callCommand = new StringBuilder(String.format(
                 "\t%%_%d = call %s %%_%d(i8* %%_%d", methodCurrRegIndex++, returnType, methodCurrRegIndex - 1, ownerReg));
-        for(int i = 0; i < actualsString.size(); i++){
-            callCommand.append(String.format(", %s %s", getLLVMType(formals.get(i).type()), actualsString.get(i)));
+        for(int i = 0; i < actualsRegs.size(); i++){
+            callCommand.append(String.format(", %s %%_%d", getLLVMType(formals.get(i).type()), actualsRegs.get(i)));
         }
         callCommand.append(")\n");
         LLVMProgram.append(callCommand);
@@ -608,17 +590,23 @@ public class LlvmVisitor implements Visitor{
 
     @Override
     public void visit(IntegerLiteralExpr e) {
-
+        LLVMProgram.append(String.format(
+                "\t%%_%d = add i32 0, %d\n", methodCurrRegIndex++, e.num()
+        ));
     }
 
     @Override
     public void visit(TrueExpr e) {
-
+        LLVMProgram.append(String.format(
+                "\t%%_%d = add i1 0, 1\n", methodCurrRegIndex++
+        ));
     }
 
     @Override
     public void visit(FalseExpr e) {
-
+        LLVMProgram.append(String.format(
+                "\t%%_%d = add i1 0, 0\n", methodCurrRegIndex++
+        ));
     }
 
     @Override
@@ -668,9 +656,9 @@ public class LlvmVisitor implements Visitor{
     @Override
     public void visit(NewIntArrayExpr e) {
         e.lengthExpr().accept(this);
-        String arraySize = exprToValue(e.lengthExpr());
+        int arraySizeReg = methodCurrRegIndex-1;
         //check if size is >= 0, if not throw oob or something
-        String compareSize = String.format("\t%%_%d = icmp slt i32 %s, 0\n", methodCurrRegIndex++, arraySize);
+        String compareSize = String.format("\t%%_%d = icmp slt i32 %%_%d, 0\n", methodCurrRegIndex++, arraySizeReg);
         String branch = String.format("\tbr i1 %%_%d, label %%alloc_arr%d, label %%alloc_arr%d\n",
                 methodCurrRegIndex - 1, methodCurrLabelIndex, methodCurrLabelIndex + 1);
         String oob = String.format("alloc_arr%d:\n\tcall void @throw_oob()\n\tbr label %%alloc_arr%d\nalloc_arr%d:\n",
@@ -678,7 +666,7 @@ public class LlvmVisitor implements Visitor{
         methodCurrLabelIndex += 2;
         //size is good
         int actualSize = methodCurrRegIndex;
-        String updateSize = String.format("\t%%_%d = add i32 %s, 1\n",methodCurrRegIndex++, arraySize);
+        String updateSize = String.format("\t%%_%d = add i32 %%_%d, 1\n",methodCurrRegIndex++, arraySizeReg);
         String allocate = String.format("\t%%_%d = call i8* @calloc(i32 4, i32 %%_%d)\n", methodCurrRegIndex++, methodCurrRegIndex - 1);
         int arrayReg = methodCurrRegIndex;
         String bitcast = String.format("\t%%_%d = bitcast i8* %%_%d to i32*\n", methodCurrRegIndex++, methodCurrRegIndex - 1);
@@ -714,8 +702,8 @@ public class LlvmVisitor implements Visitor{
     @Override
     public void visit(NotExpr e) {
         e.e().accept(this);
-        String eVal = exprToValue(e.e());
-        LLVMProgram.append(String.format("\t%%_%d = sub i1 1, %s\n", methodCurrRegIndex++, eVal));
+        int valReg = methodCurrRegIndex-1;
+        LLVMProgram.append(String.format("\t%%_%d = sub i1 1, %s\n", methodCurrRegIndex++, valReg));
     }
 
     @Override
