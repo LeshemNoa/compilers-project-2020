@@ -450,7 +450,7 @@ public class LLVMVisitor implements Visitor{
         //do and
         /* notice that if e1 is false than rightVal could have garbage,
          * but we don't care because leftVal has false so the and will be false*/
-        String endAndCommand = String.format("end_and%d:\n\t%%_%d = and i1 %%_%d, %%_%d\n", methodCurrLabelIndex++, endAnd, leftValReg, rightValReg);
+        String endAndCommand = String.format("end_and%d:\n\t%%_%d = and i1 %%_%d, %%_%d\n", endAnd, methodCurrRegIndex++, leftValReg, rightValReg);
         LLVMProgram.append(endE2.concat(endAndCommand));
     }
 
