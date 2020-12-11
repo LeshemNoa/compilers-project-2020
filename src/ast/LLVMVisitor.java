@@ -72,7 +72,8 @@ public class LLVMVisitor implements Visitor{
 
         StringBuilder res = new StringBuilder("\n\n@." + classDecl.name() + "_vtable = global [" + methods.size() + " x i8*] [");
         for(int i = 0; i < methods.size(); i++){
-            res.append(methodDeclToVTElem((MethodDecl) methods.get(i).declaration(), classDecl.name()));
+
+            res.append(methodDeclToVTElem((MethodDecl) methods.get(i).declaration(), methods.get(i).className()));
             if (i != methods.size()-1) {
                 res.append(",");
             }
