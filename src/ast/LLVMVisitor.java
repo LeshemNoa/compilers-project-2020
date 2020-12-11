@@ -518,8 +518,8 @@ public class LLVMVisitor implements Visitor{
     public void visit(ArrayLengthExpr e) {
         //get pointer to array
         e.arrayExpr().accept(this);
-
-        int arrayPointerReg = i8PointerToIntArrayPointer();
+        int arrayPointerReg = methodCurrRegIndex - 1;
+        //int arrayPointerReg = i8PointerToIntArrayPointer();
 
         LLVMProgram.append(String.format("\t%%_%d = load i32, i32* %%_%d\n", methodCurrRegIndex++, arrayPointerReg));
     }
@@ -644,13 +644,14 @@ public class LLVMVisitor implements Visitor{
         /*
           Case 1: id is a local variable in the method
          */
-        if (enclosingST.contains(id, false)) {
+        if (e.enclosingScope().contains(id, false)) {
             LLVMProgram.append(String.format(
                     "\t%%_%d = load %s, %s* %%%s\n", methodCurrRegIndex++, idLLType, idLLType, id
             ));
             return;
         }
-        String enclosingClassName = enclosingST.getParent().scopeName();
+        //if we've reached this code than e is defined as a field of enclosingST
+        String enclosingClassName = enclosingST.scopeName();
         List<STSymbol> classInstanceShape = instanceTemplates.get(enclosingClassName);
         /*
           Case 2: id is a field of %this
