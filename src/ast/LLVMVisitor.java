@@ -221,10 +221,13 @@ public class LLVMVisitor implements Visitor{
                 "if%d:\n", methodCurrLabelIndex++
         ));
         ifStatement.thencase().accept(this);
+        LLVMProgram.append(String.format("\tbr label %%if%d\n", methodCurrLabelIndex + 1));
         LLVMProgram.append(String.format(
                 "if%d:\n", methodCurrLabelIndex++
         ));
         ifStatement.elsecase().accept(this);
+        LLVMProgram.append(String.format("\tbr label %%if%d\n", methodCurrLabelIndex));
+        LLVMProgram.append(String.format("if%d:\n", methodCurrLabelIndex++));
     }
 
     @Override
@@ -538,7 +541,8 @@ public class LLVMVisitor implements Visitor{
             LLVMProgram.append(String.format("\t%%_%d = bitcast i8* %%this to i8***\n", methodCurrRegIndex++));
         }
         int vtableReg = methodCurrRegIndex;
-        LLVMProgram.append(String.format("\t%%_%d = load i8**, i8*** %%_%d\n", methodCurrRegIndex++, ownerReg));
+        LLVMProgram.append(String.format("\t%%_%d = load i8**, i8*** %%_%d\n", vtableReg, methodCurrRegIndex - 1));
+        methodCurrRegIndex++;
         int methodIndex = getMethodIndexInVtable(e);
         LLVMProgram.append(String.format(
                 "\t%%_%d = getelementptr i8*, i8** %%_%d, i32 %d\n", methodCurrRegIndex++, vtableReg, methodIndex));
@@ -568,8 +572,16 @@ public class LLVMVisitor implements Visitor{
         castToSignature.append(")*\n");
         LLVMProgram.append(castToSignature.toString());
         //call function
-        StringBuilder callCommand = new StringBuilder(String.format(
-                "\t%%_%d = call %s %%_%d(i8* %%_%d", methodCurrRegIndex++, returnType, methodCurrRegIndex - 1, ownerReg));
+        int methodPointer = methodCurrRegIndex - 1;
+        StringBuilder callCommand;
+        if(thisExpr){
+            callCommand = new StringBuilder(String.format(
+                    "\t%%_%d = call %s %%_%d(i8* %%this", methodCurrRegIndex++, returnType, methodPointer));
+        }
+        else{
+            callCommand = new StringBuilder(String.format(
+                    "\t%%_%d = call %s %%_%d(i8* %%_%d", methodCurrRegIndex++, returnType, methodPointer, ownerReg));
+        }
         for(int i = 0; i < actualsRegs.size(); i++){
             callCommand.append(String.format(", %s %%_%d", getLLVMType(formals.get(i).type()), actualsRegs.get(i)));
         }
@@ -634,7 +646,7 @@ public class LLVMVisitor implements Visitor{
          */
         if (enclosingST.contains(id, false)) {
             LLVMProgram.append(String.format(
-                    "\t%%_%d = load %s, %s* %%%s\n", methodCurrRegIndex, idLLType, idLLType, id
+                    "\t%%_%d = load %s, %s* %%%s\n", methodCurrRegIndex++, idLLType, idLLType, id
             ));
             return;
         }
@@ -656,7 +668,7 @@ public class LLVMVisitor implements Visitor{
             ));
             methodCurrRegIndex++;
             LLVMProgram.append(String.format(
-                    "\t%%_%d = load %s, %s* %%_%d\n", methodCurrRegIndex, idLLType, idLLType, idPtrRegPostCast
+                    "\t%%_%d = load %s, %s* %%_%d\n", methodCurrRegIndex++, idLLType, idLLType, idPtrRegPostCast
             ));
         }
     }
