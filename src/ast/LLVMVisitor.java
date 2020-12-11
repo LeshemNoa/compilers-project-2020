@@ -83,7 +83,7 @@ public class LLVMVisitor implements Visitor{
     }
 
     private String methodDeclToVTElem(MethodDecl methodDecl, String className){
-        String res = "i8* bitcast (i32 (i8*";
+        String res = String.format("i8* bitcast (%s (i8*", getLLVMType(methodDecl.returnType()));
         List<FormalArg> formals = methodDecl.formals();
         for(int i = 0; i < methodDecl.formals().size(); i++){
             res = res.concat(", " + getLLVMType(formals.get(i)));
