@@ -70,9 +70,12 @@ public class LLVMVisitor implements Visitor{
         List<STSymbol> methods = this.vtables.get(classDecl.name());
         if(methods == null || methods.size() == 0) return "";
 
-        StringBuilder res = new StringBuilder("\n\n@." + classDecl.name() + "_vtable = global [" + methods.size() + " x i8*] [\n");
-        for(STSymbol method : methods){
-            res.append("\t").append(methodDeclToVTElem((MethodDecl) method.declaration(), classDecl.name())).append(",\n");
+        StringBuilder res = new StringBuilder("\n\n@." + classDecl.name() + "_vtable = global [" + methods.size() + " x i8*] [");
+        for(int i = 0; i < methods.size(); i++){
+            res.append(methodDeclToVTElem((MethodDecl) methods.get(i).declaration(), classDecl.name()));
+            if (i != methods.size()-1) {
+                res.append(",");
+            }
         }
         res.append("]\n\n");
         return res.toString();
@@ -187,6 +190,13 @@ public class LLVMVisitor implements Visitor{
             stmt.accept(this);
         }
         methodDecl.ret().accept(this);
+        if (methodDecl.ret().getClass().getName().equals("ast.ThisExpr")) {
+            LLVMProgram.append(String.format(
+                    "\tret %s %%this\n", getLLVMType(methodDecl.returnType())));
+        } else {
+            LLVMProgram.append(String.format(
+                    "\tret %s %%_%d\n", getLLVMType(methodDecl.returnType()), methodCurrRegIndex-1));
+        }
         LLVMProgram.append("}\n\n");
     }
 
