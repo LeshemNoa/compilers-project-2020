@@ -702,7 +702,8 @@ public class LLVMVisitor implements Visitor{
         lastCallocReg = methodCurrRegIndex;
         String allocate = String.format("\t%%_%d = call i8* @calloc(i32 4, i32 %%_%d)\n", methodCurrRegIndex++, lenReg);
         int arrayReg = methodCurrRegIndex;
-        String bitcast = String.format("\t%%_%d = bitcast i8* %%_%d to i32*\n", methodCurrRegIndex++, methodCurrRegIndex - 1);
+        String bitcast = String.format("\t%%_%d = bitcast i8* %%_%d to i32*\n", methodCurrRegIndex, methodCurrRegIndex - 1);
+        methodCurrRegIndex++;
         String inputSize = String.format("\tstore i32 %%_%d, i32* %%_%d\n", actualSize, arrayReg);
         LLVMProgram.append(compareSize)
                 .append(branch)
