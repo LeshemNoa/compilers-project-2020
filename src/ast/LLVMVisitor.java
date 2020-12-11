@@ -33,6 +33,8 @@ public class LLVMVisitor implements Visitor{
      */
     private int methodCurrRegIndex;
     private int methodCurrLabelIndex;
+    //to be used for calloc because it will not be that last register assigned
+    private int lastCallocReg;
 
     public LLVMVisitor(Program program){
         LLVMProgram = new StringBuilder();
@@ -221,10 +223,13 @@ public class LLVMVisitor implements Visitor{
                 "if%d:\n", methodCurrLabelIndex++
         ));
         ifStatement.thencase().accept(this);
+        LLVMProgram.append(String.format("\tbr label %%if%d\n", methodCurrLabelIndex + 1));
         LLVMProgram.append(String.format(
                 "if%d:\n", methodCurrLabelIndex++
         ));
         ifStatement.elsecase().accept(this);
+        LLVMProgram.append(String.format("\tbr label %%if%d\n", methodCurrLabelIndex));
+        LLVMProgram.append(String.format("if%d:\n", methodCurrLabelIndex++));
     }
 
     @Override
@@ -238,17 +243,20 @@ public class LLVMVisitor implements Visitor{
         ));
         whileStatement.cond().accept(this);
         LLVMProgram.append(String.format(
-                "\tbr i1 %%_%d, label %%while_loop%d, label %%while_end%d\n", methodCurrRegIndex -1, methodCurrLabelIndex, methodCurrLabelIndex+1
+                "\tbr i1 %%_%d, label %%while_loop%d, label %%while_end%d\n",
+                methodCurrRegIndex -1, methodCurrLabelIndex, methodCurrLabelIndex+1
         ));
+        int while_loop = methodCurrLabelIndex++;
+        int while_end = methodCurrLabelIndex++;
         LLVMProgram.append(String.format(
-                "while_loop%d:\n", methodCurrLabelIndex++
-        ));
-        LLVMProgram.append(String.format(
-                "\tbr label %%while_cond%d\n", whileCondLabelIndex
+                "while_loop%d:\n", while_loop
         ));
         whileStatement.body().accept(this);
         LLVMProgram.append(String.format(
-                "while_end%d:\n", methodCurrLabelIndex++
+                "\tbr label %%while_cond%d\n", whileCondLabelIndex
+        ));
+        LLVMProgram.append(String.format(
+                "while_end%d:\n", while_end
         ));
     }
 
@@ -271,8 +279,10 @@ public class LLVMVisitor implements Visitor{
          */
         if (enclosingST.contains(assigneeName, false)) {
             assignStatement.rv().accept(this);
+            boolean isNew = assignStatement.rv().getClass().getName().equals("ast.NewObjectExpr") || assignStatement.rv().getClass().getName().equals("ast.NewIntArrayExpr");
+            int rvReg = isNew ? lastCallocReg : methodCurrRegIndex-1;
             LLVMProgram.append(String.format(
-                    "\tstore %s %%_%d, %s* %%%s\n", assigneeLLType, methodCurrRegIndex-1, assigneeLLType, assigneeName
+                    "\tstore %s %%_%d, %s* %%%s\n", assigneeLLType, rvReg, assigneeLLType, assigneeName
             ));
             return;
         }
@@ -283,7 +293,9 @@ public class LLVMVisitor implements Visitor{
          */
         if (classInstanceHasField(classInstanceShape, assigneeName)) {
             assignStatement.rv().accept(this);
-            int assignedValReg = methodCurrRegIndex - 1;
+            boolean isNew = assignStatement.rv().getClass().getName().equals("ast.NewObjectExpr") || assignStatement.rv().getClass().getName().equals("ast.NewIntArrayExpr");
+            int assignedValReg = isNew ? lastCallocReg : methodCurrRegIndex-1;
+
             int offset = calcFieldOffset(classInstanceShape, assigneeName);
             int assigneePtrReg = methodCurrRegIndex;
             LLVMProgram.append(String.format(
@@ -366,7 +378,7 @@ public class LLVMVisitor implements Visitor{
     private void validateIndexArray(int indexReg, int arrayPtrReg){
         // Check that the index is greater than zero
         LLVMProgram.append(String.format(
-                "\t%%_%d = icmp slt i32 %d, 0\n", methodCurrRegIndex++, indexReg
+                "\t%%_%d = icmp slt i32 %%_%d, 0\n", methodCurrRegIndex++, indexReg
         ));
         LLVMProgram.append(String.format(
                 "\tbr i1 %%_%d, label %%arr_alloc%d, label %%arr_alloc%d\n", methodCurrRegIndex-1, methodCurrLabelIndex, methodCurrLabelIndex +1
@@ -393,7 +405,7 @@ public class LLVMVisitor implements Visitor{
         // sle rather than slt because the size is off by one because a[0] is occupied
         // refer to Arrays.ll 87-94
         LLVMProgram.append(String.format(
-                "\t%%_%d = icmp sle i32 %%_%d, %%_%d", methodCurrRegIndex, methodCurrRegIndex-1, indexReg
+                "\t%%_%d = icmp sle i32 %%_%d, %%_%d\n", methodCurrRegIndex, methodCurrRegIndex-1, indexReg
         ));
         methodCurrRegIndex++;
         LLVMProgram.append(String.format(
@@ -445,7 +457,7 @@ public class LLVMVisitor implements Visitor{
         e.e2().accept(this);
         int rightValueReg = methodCurrRegIndex-1;
         LLVMProgram.append(String.format(
-                "\t%%_%d = %s i32 %%_%d, %%_%d", methodCurrRegIndex++, operation, leftValueReg, rightValueReg));
+                "\t%%_%d = %s i32 %%_%d, %%_%d\n", methodCurrRegIndex++, operation, leftValueReg, rightValueReg));
     }
 
     @Override
@@ -474,7 +486,7 @@ public class LLVMVisitor implements Visitor{
         e.arrayExpr().accept(this);
         //now register number methodCurrRegIndex - 1 is the i8* pointer to the pointer to the array
 
-        int arrayPointerReg = i8PointerToIntArrayPointer();
+        int arrayPointerReg = methodCurrRegIndex - 1;
 
         //check if index is not out of bounds
         e.indexExpr().accept(this);
@@ -488,7 +500,7 @@ public class LLVMVisitor implements Visitor{
         //put value into register
         String updateIndex = String.format("\t%%_%d = add i32* %%_%d, 1\n", methodCurrRegIndex++, indexReg);
         StringBuilder getElem = new StringBuilder(String.format(
-                "%%_%d = getelementptr i32, i32* %%_%d, i32 %%_%d\n", methodCurrRegIndex, arrayPointerReg, methodCurrRegIndex-1));
+                "\t%%_%d = getelementptr i32, i32* %%_%d, i32 %%_%d\n", methodCurrRegIndex, arrayPointerReg, methodCurrRegIndex-1));
         methodCurrRegIndex++;
         getElem.append(String.format("\t%%_%d = load i32, i32* %%_%d\n", methodCurrRegIndex, methodCurrRegIndex-1));
         methodCurrRegIndex++;
@@ -496,27 +508,12 @@ public class LLVMVisitor implements Visitor{
         LLVMProgram.append(updateIndex).append(getElem.toString());
     }
 
-    /**
-     * assuming that methodCurrRegIndex - 1 is holding the i8* that is a pointer to the i32* of the array,
-     * this puts the i32* in a register to be accesed
-     * @return the number of the register that is holding the i32* that is the array
-     */
-    private int i8PointerToIntArrayPointer(){
-        String bitCast = "\t%_" + (methodCurrRegIndex++) + " = bitcast i8* %_";
-        bitCast = bitCast.concat((methodCurrRegIndex - 2) + " to i32**\n");
-        int arrayPointerReg = methodCurrRegIndex;
-        String loadPointer = "\t%_" + (methodCurrRegIndex++) + " = load i32*, i32** %_";
-        loadPointer = loadPointer.concat((methodCurrRegIndex - 2) + "\n");
-        LLVMProgram.append(bitCast).append(loadPointer);
-        return arrayPointerReg;
-    }
 
     @Override
     public void visit(ArrayLengthExpr e) {
         //get pointer to array
         e.arrayExpr().accept(this);
-
-        int arrayPointerReg = i8PointerToIntArrayPointer();
+        int arrayPointerReg = methodCurrRegIndex - 1;
 
         LLVMProgram.append(String.format("\t%%_%d = load i32, i32* %%_%d\n", methodCurrRegIndex++, arrayPointerReg));
     }
@@ -530,7 +527,8 @@ public class LLVMVisitor implements Visitor{
             thisExpr = true;
         }
         //now reg number methodCurrRegIndex - 1 is holding the i8* to the object
-        int ownerReg = methodCurrRegIndex-1;
+        boolean isNew = e.ownerExpr().getClass().getName().equals("ast.NewObjectExpr") || e.ownerExpr().getClass().getName().equals("ast.NewIntArrayExpr");
+        int ownerReg = isNew ? lastCallocReg : methodCurrRegIndex-1;
         //Now access the vtable
         if (!thisExpr) {
             LLVMProgram.append(String.format("\t%%_%d = bitcast i8* %%_%d to i8***\n", methodCurrRegIndex++, ownerReg));
@@ -538,7 +536,8 @@ public class LLVMVisitor implements Visitor{
             LLVMProgram.append(String.format("\t%%_%d = bitcast i8* %%this to i8***\n", methodCurrRegIndex++));
         }
         int vtableReg = methodCurrRegIndex;
-        LLVMProgram.append(String.format("\t%%_%d = load i8**, i8*** %%_%d\n", methodCurrRegIndex++, ownerReg));
+        LLVMProgram.append(String.format("\t%%_%d = load i8**, i8*** %%_%d\n", vtableReg, methodCurrRegIndex - 1));
+        methodCurrRegIndex++;
         int methodIndex = getMethodIndexInVtable(e);
         LLVMProgram.append(String.format(
                 "\t%%_%d = getelementptr i8*, i8** %%_%d, i32 %d\n", methodCurrRegIndex++, vtableReg, methodIndex));
@@ -568,8 +567,16 @@ public class LLVMVisitor implements Visitor{
         castToSignature.append(")*\n");
         LLVMProgram.append(castToSignature.toString());
         //call function
-        StringBuilder callCommand = new StringBuilder(String.format(
-                "\t%%_%d = call %s %%_%d(i8* %%_%d", methodCurrRegIndex++, returnType, methodCurrRegIndex - 1, ownerReg));
+        int methodPointer = methodCurrRegIndex - 1;
+        StringBuilder callCommand;
+        if(thisExpr){
+            callCommand = new StringBuilder(String.format(
+                    "\t%%_%d = call %s %%_%d(i8* %%this", methodCurrRegIndex++, returnType, methodPointer));
+        }
+        else{
+            callCommand = new StringBuilder(String.format(
+                    "\t%%_%d = call %s %%_%d(i8* %%_%d", methodCurrRegIndex++, returnType, methodPointer, ownerReg));
+        }
         for(int i = 0; i < actualsRegs.size(); i++){
             callCommand.append(String.format(", %s %%_%d", getLLVMType(formals.get(i).type()), actualsRegs.get(i)));
         }
@@ -632,13 +639,14 @@ public class LLVMVisitor implements Visitor{
         /*
           Case 1: id is a local variable in the method
          */
-        if (enclosingST.contains(id, false)) {
+        if (e.enclosingScope().contains(id, false)) {
             LLVMProgram.append(String.format(
-                    "\t%%_%d = load %s, %s* %%%s\n", methodCurrRegIndex, idLLType, idLLType, id
+                    "\t%%_%d = load %s, %s* %%%s\n", methodCurrRegIndex++, idLLType, idLLType, id
             ));
             return;
         }
-        String enclosingClassName = enclosingST.getParent().scopeName();
+        //if we've reached this code than e is defined as a field of enclosingST
+        String enclosingClassName = enclosingST.scopeName();
         List<STSymbol> classInstanceShape = instanceTemplates.get(enclosingClassName);
         /*
           Case 2: id is a field of %this
@@ -656,7 +664,7 @@ public class LLVMVisitor implements Visitor{
             ));
             methodCurrRegIndex++;
             LLVMProgram.append(String.format(
-                    "\t%%_%d = load %s, %s* %%_%d\n", methodCurrRegIndex, idLLType, idLLType, idPtrRegPostCast
+                    "\t%%_%d = load %s, %s* %%_%d\n", methodCurrRegIndex++, idLLType, idLLType, idPtrRegPostCast
             ));
         }
     }
@@ -681,7 +689,9 @@ public class LLVMVisitor implements Visitor{
         //size is good
         int actualSize = methodCurrRegIndex;
         String updateSize = String.format("\t%%_%d = add i32 %%_%d, 1\n",methodCurrRegIndex++, arraySizeReg);
-        String allocate = String.format("\t%%_%d = call i8* @calloc(i32 4, i32 %%_%d)\n", methodCurrRegIndex++, methodCurrRegIndex - 1);
+        int lenReg = methodCurrRegIndex - 1;
+        lastCallocReg = methodCurrRegIndex;
+        String allocate = String.format("\t%%_%d = call i8* @calloc(i32 4, i32 %%_%d)\n", methodCurrRegIndex++, lenReg);
         int arrayReg = methodCurrRegIndex;
         String bitcast = String.format("\t%%_%d = bitcast i8* %%_%d to i32*\n", methodCurrRegIndex++, methodCurrRegIndex - 1);
         String inputSize = String.format("\tstore i32 %%_%d, i32* %%_%d\n", actualSize, arrayReg);
@@ -701,6 +711,7 @@ public class LLVMVisitor implements Visitor{
             allocationSize += getSizeInBytes(symbol);
         }
         int objectAdressReg = methodCurrRegIndex++;
+        lastCallocReg = methodCurrRegIndex;
         String allocate = String.format("\t%%_%d = call i8* @calloc(i32 1, i32 %d)\n", objectAdressReg, allocationSize);
         int castedI8Pointer = methodCurrRegIndex++;
         String bitcast = String.format("\t%%_%d = bitcast i8* %%_%d to i8***\n", castedI8Pointer, objectAdressReg);
@@ -710,7 +721,7 @@ public class LLVMVisitor implements Visitor{
                 vtableAddress, vtableSize, vtableSize, e.classId());
         String storeVtable = String.format("\tstore i8** %%_%d, i8*** %%_%d\n", vtableAddress, castedI8Pointer);
         LLVMProgram.append(allocate).append(bitcast).append(getVtable).append(storeVtable);
-        LLVMProgram.append(String.format("\t%%_%d = add i8* %%_%d, 0\n", methodCurrRegIndex++, objectAdressReg));
+        LLVMProgram.append(String.format("\t%%_%d = add i8* %%_%d, i8* 0\n", methodCurrRegIndex++, objectAdressReg));
         //memset to 0?
     }
 
