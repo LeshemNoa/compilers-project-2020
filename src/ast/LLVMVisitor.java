@@ -448,7 +448,7 @@ public class LLVMVisitor implements Visitor{
         e.e2().accept(this);
         int rightValueReg = methodCurrRegIndex-1;
         LLVMProgram.append(String.format(
-                "\t%%_%d = %s i32 %%_%d, %%_%d", methodCurrRegIndex++, operation, leftValueReg, rightValueReg));
+                "\t%%_%d = %s i32 %%_%d, %%_%d\n", methodCurrRegIndex++, operation, leftValueReg, rightValueReg));
     }
 
     @Override
