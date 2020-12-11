@@ -249,10 +249,10 @@ public class LLVMVisitor implements Visitor{
         LLVMProgram.append(String.format(
                 "while_loop%d:\n", while_loop
         ));
+        whileStatement.body().accept(this);
         LLVMProgram.append(String.format(
                 "\tbr label %%while_cond%d\n", whileCondLabelIndex
         ));
-        whileStatement.body().accept(this);
         LLVMProgram.append(String.format(
                 "while_end%d:\n", while_end
         ));
@@ -372,7 +372,7 @@ public class LLVMVisitor implements Visitor{
     private void validateIndexArray(int indexReg, int arrayPtrReg){
         // Check that the index is greater than zero
         LLVMProgram.append(String.format(
-                "\t%%_%d = icmp slt i32 %d, 0\n", methodCurrRegIndex++, indexReg
+                "\t%%_%d = icmp slt i32 %%_%d, 0\n", methodCurrRegIndex++, indexReg
         ));
         LLVMProgram.append(String.format(
                 "\tbr i1 %%_%d, label %%arr_alloc%d, label %%arr_alloc%d\n", methodCurrRegIndex-1, methodCurrLabelIndex, methodCurrLabelIndex +1
@@ -399,7 +399,7 @@ public class LLVMVisitor implements Visitor{
         // sle rather than slt because the size is off by one because a[0] is occupied
         // refer to Arrays.ll 87-94
         LLVMProgram.append(String.format(
-                "\t%%_%d = icmp sle i32 %%_%d, %%_%d", methodCurrRegIndex, methodCurrRegIndex-1, indexReg
+                "\t%%_%d = icmp sle i32 %%_%d, %%_%d\n", methodCurrRegIndex, methodCurrRegIndex-1, indexReg
         ));
         methodCurrRegIndex++;
         LLVMProgram.append(String.format(
@@ -480,7 +480,8 @@ public class LLVMVisitor implements Visitor{
         e.arrayExpr().accept(this);
         //now register number methodCurrRegIndex - 1 is the i8* pointer to the pointer to the array
 
-        int arrayPointerReg = i8PointerToIntArrayPointer();
+        //int arrayPointerReg = i8PointerToIntArrayPointer();
+        int arrayPointerReg = methodCurrRegIndex - 1;
 
         //check if index is not out of bounds
         e.indexExpr().accept(this);
@@ -494,7 +495,7 @@ public class LLVMVisitor implements Visitor{
         //put value into register
         String updateIndex = String.format("\t%%_%d = add i32* %%_%d, 1\n", methodCurrRegIndex++, indexReg);
         StringBuilder getElem = new StringBuilder(String.format(
-                "%%_%d = getelementptr i32, i32* %%_%d, i32 %%_%d\n", methodCurrRegIndex, arrayPointerReg, methodCurrRegIndex-1));
+                "\t%%_%d = getelementptr i32, i32* %%_%d, i32 %%_%d\n", methodCurrRegIndex, arrayPointerReg, methodCurrRegIndex-1));
         methodCurrRegIndex++;
         getElem.append(String.format("\t%%_%d = load i32, i32* %%_%d\n", methodCurrRegIndex, methodCurrRegIndex-1));
         methodCurrRegIndex++;
@@ -507,7 +508,7 @@ public class LLVMVisitor implements Visitor{
      * this puts the i32* in a register to be accesed
      * @return the number of the register that is holding the i32* that is the array
      */
-    private int i8PointerToIntArrayPointer(){
+    /*private int i8PointerToIntArrayPointer(){
         String bitCast = "\t%_" + (methodCurrRegIndex++) + " = bitcast i8* %_";
         bitCast = bitCast.concat((methodCurrRegIndex - 2) + " to i32**\n");
         int arrayPointerReg = methodCurrRegIndex;
@@ -515,7 +516,7 @@ public class LLVMVisitor implements Visitor{
         loadPointer = loadPointer.concat((methodCurrRegIndex - 2) + "\n");
         LLVMProgram.append(bitCast).append(loadPointer);
         return arrayPointerReg;
-    }
+    }*/
 
     @Override
     public void visit(ArrayLengthExpr e) {
