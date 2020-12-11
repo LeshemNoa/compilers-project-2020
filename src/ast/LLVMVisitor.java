@@ -287,7 +287,7 @@ public class LLVMVisitor implements Visitor{
         /*
           Case 1: assignee is a local variable in the method
          */
-        if (enclosingST.contains(assigneeName, false)) {
+        if (assignStatement.enclosingScope().contains(assigneeName, false)) {
             assignStatement.rv().accept(this);
             boolean isNew = assignStatement.rv().getClass().getName().equals("ast.NewObjectExpr") || assignStatement.rv().getClass().getName().equals("ast.NewIntArrayExpr");
             int rvReg = isNew ? lastCallocReg : methodCurrRegIndex-1;
@@ -296,10 +296,10 @@ public class LLVMVisitor implements Visitor{
             ));
             return;
         }
-        String enclosingClassName = enclosingST.getParent().scopeName();
+        String enclosingClassName = enclosingST.scopeName();
         List<STSymbol> classInstanceShape = instanceTemplates.get(enclosingClassName);
         /*
-          Case 2: assignee is a field of %this
+          Case 2: assignee is a field
          */
         if (classInstanceHasField(classInstanceShape, assigneeName)) {
             assignStatement.rv().accept(this);
