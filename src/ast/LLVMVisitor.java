@@ -241,17 +241,20 @@ public class LLVMVisitor implements Visitor{
         ));
         whileStatement.cond().accept(this);
         LLVMProgram.append(String.format(
-                "\tbr i1 %%_%d, label %%while_loop%d, label %%while_end%d\n", methodCurrRegIndex -1, methodCurrLabelIndex, methodCurrLabelIndex+1
+                "\tbr i1 %%_%d, label %%while_loop%d, label %%while_end%d\n",
+                methodCurrRegIndex -1, methodCurrLabelIndex, methodCurrLabelIndex+1
         ));
+        int while_loop = methodCurrLabelIndex++;
+        int while_end = methodCurrLabelIndex++;
         LLVMProgram.append(String.format(
-                "while_loop%d:\n", methodCurrLabelIndex++
+                "while_loop%d:\n", while_loop
         ));
         LLVMProgram.append(String.format(
                 "\tbr label %%while_cond%d\n", whileCondLabelIndex
         ));
         whileStatement.body().accept(this);
         LLVMProgram.append(String.format(
-                "while_end%d:\n", methodCurrLabelIndex++
+                "while_end%d:\n", while_end
         ));
     }
 
