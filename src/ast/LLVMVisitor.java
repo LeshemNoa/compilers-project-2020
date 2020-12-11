@@ -681,8 +681,7 @@ public class LLVMVisitor implements Visitor{
 
     @Override
     public void visit(ThisExpr e) {
-        LLVMProgram.append(String.format("\t%%_%d = i8* %%this\n", methodCurrRegIndex++));
-        //is this legal in llvm? do we need to change it to add i8* %this, 0?
+
     }
 
     @Override
