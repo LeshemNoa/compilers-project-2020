@@ -33,6 +33,8 @@ public class LLVMVisitor implements Visitor{
      */
     private int methodCurrRegIndex;
     private int methodCurrLabelIndex;
+    //to be used for calloc because it will not be that last register assigned
+    private int lastCallocReg;
 
     public LLVMVisitor(Program program){
         LLVMProgram = new StringBuilder();
@@ -277,8 +279,10 @@ public class LLVMVisitor implements Visitor{
          */
         if (enclosingST.contains(assigneeName, false)) {
             assignStatement.rv().accept(this);
+            boolean isNew = assignStatement.rv().getClass().getName().equals("ast.NewObjectExpr") || assignStatement.rv().getClass().getName().equals("ast.NewIntArrayExpr");
+            int rvReg = isNew ? lastCallocReg : methodCurrRegIndex-1;
             LLVMProgram.append(String.format(
-                    "\tstore %s %%_%d, %s* %%%s\n", assigneeLLType, methodCurrRegIndex-1, assigneeLLType, assigneeName
+                    "\tstore %s %%_%d, %s* %%%s\n", assigneeLLType, rvReg, assigneeLLType, assigneeName
             ));
             return;
         }
@@ -289,7 +293,9 @@ public class LLVMVisitor implements Visitor{
          */
         if (classInstanceHasField(classInstanceShape, assigneeName)) {
             assignStatement.rv().accept(this);
-            int assignedValReg = methodCurrRegIndex - 1;
+            boolean isNew = assignStatement.rv().getClass().getName().equals("ast.NewObjectExpr") || assignStatement.rv().getClass().getName().equals("ast.NewIntArrayExpr");
+            int assignedValReg = isNew ? lastCallocReg : methodCurrRegIndex-1;
+
             int offset = calcFieldOffset(classInstanceShape, assigneeName);
             int assigneePtrReg = methodCurrRegIndex;
             LLVMProgram.append(String.format(
@@ -521,7 +527,8 @@ public class LLVMVisitor implements Visitor{
             thisExpr = true;
         }
         //now reg number methodCurrRegIndex - 1 is holding the i8* to the object
-        int ownerReg = methodCurrRegIndex-1;
+        boolean isNew = e.ownerExpr().getClass().getName().equals("ast.NewObjectExpr") || e.ownerExpr().getClass().getName().equals("ast.NewIntArrayExpr");
+        int ownerReg = isNew ? lastCallocReg : methodCurrRegIndex-1;
         //Now access the vtable
         if (!thisExpr) {
             LLVMProgram.append(String.format("\t%%_%d = bitcast i8* %%_%d to i8***\n", methodCurrRegIndex++, ownerReg));
@@ -682,7 +689,9 @@ public class LLVMVisitor implements Visitor{
         //size is good
         int actualSize = methodCurrRegIndex;
         String updateSize = String.format("\t%%_%d = add i32 %%_%d, 1\n",methodCurrRegIndex++, arraySizeReg);
-        String allocate = String.format("\t%%_%d = call i8* @calloc(i32 4, i32 %%_%d)\n", methodCurrRegIndex++, methodCurrRegIndex - 1);
+        int lenReg = methodCurrRegIndex - 1;
+        lastCallocReg = methodCurrRegIndex;
+        String allocate = String.format("\t%%_%d = call i8* @calloc(i32 4, i32 %%_%d)\n", methodCurrRegIndex++, lenReg);
         int arrayReg = methodCurrRegIndex;
         String bitcast = String.format("\t%%_%d = bitcast i8* %%_%d to i32*\n", methodCurrRegIndex++, methodCurrRegIndex - 1);
         String inputSize = String.format("\tstore i32 %%_%d, i32* %%_%d\n", actualSize, arrayReg);
@@ -702,6 +711,7 @@ public class LLVMVisitor implements Visitor{
             allocationSize += getSizeInBytes(symbol);
         }
         int objectAdressReg = methodCurrRegIndex++;
+        lastCallocReg = methodCurrRegIndex;
         String allocate = String.format("\t%%_%d = call i8* @calloc(i32 1, i32 %d)\n", objectAdressReg, allocationSize);
         int castedI8Pointer = methodCurrRegIndex++;
         String bitcast = String.format("\t%%_%d = bitcast i8* %%_%d to i8***\n", castedI8Pointer, objectAdressReg);
@@ -711,7 +721,7 @@ public class LLVMVisitor implements Visitor{
                 vtableAddress, vtableSize, vtableSize, e.classId());
         String storeVtable = String.format("\tstore i8** %%_%d, i8*** %%_%d\n", vtableAddress, castedI8Pointer);
         LLVMProgram.append(allocate).append(bitcast).append(getVtable).append(storeVtable);
-        LLVMProgram.append(String.format("\t%%_%d = add i8* %%_%d, 0\n", methodCurrRegIndex++, objectAdressReg));
+        LLVMProgram.append(String.format("\t%%_%d = add i8* %%_%d, i8* 0\n", methodCurrRegIndex++, objectAdressReg));
         //memset to 0?
     }
 
