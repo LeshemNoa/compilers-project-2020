@@ -285,6 +285,7 @@ public class LLVMVisitor implements Visitor{
         SymbolTable enclosingST = STLookup.findDeclTable(assigneeName, forest, assignStatement.enclosingScope(), programSymbolTable) ;
         VariableIntroduction assigneeVarIntro = (VariableIntroduction) enclosingST.getSymbol(assigneeName, false).declaration();
         String assigneeLLType = getLLVMType(assigneeVarIntro);
+        boolean rvIsThis = assignStatement.rv().getClass().getName().equals("ast.ThisExpr");
         /*
           Case 1: assignee is a local variable in the method
          */
@@ -292,9 +293,16 @@ public class LLVMVisitor implements Visitor{
             assignStatement.rv().accept(this);
             boolean isNew = assignStatement.rv().getClass().getName().equals("ast.NewObjectExpr") || assignStatement.rv().getClass().getName().equals("ast.NewIntArrayExpr");
             int rvReg = isNew ? lastCallocReg : methodCurrRegIndex-1;
-            LLVMProgram.append(String.format(
-                    "\tstore %s %%_%d, %s* %%%s\n", assigneeLLType, rvReg, assigneeLLType, assigneeName
-            ));
+            if(rvIsThis){
+                LLVMProgram.append(String.format(
+                        "\tstore %s %%this, %s* %%%s\n", assigneeLLType, assigneeLLType, assigneeName
+                ));
+            }
+            else{
+                LLVMProgram.append(String.format(
+                        "\tstore %s %%_%d, %s* %%%s\n", assigneeLLType, rvReg, assigneeLLType, assigneeName
+                ));
+            }
             return;
         }
         String enclosingClassName = assignStatement.enclosingScope().getParent().scopeName();
@@ -318,6 +326,12 @@ public class LLVMVisitor implements Visitor{
                     "\t%%_%d = bitcast i8* %%_%d to %s*\n", assigneePtrRegPostCast, assigneePtrReg, assigneeLLType
             ));
             methodCurrRegIndex++;
+            if(rvIsThis){
+                LLVMProgram.append(String.format(
+                        "\tstore %s %%this, %s* %%_%d\n", assigneeLLType, assigneeLLType, assigneePtrRegPostCast
+                ));
+                return;
+            }
             LLVMProgram.append(String.format(
                     "\tstore %s %%_%d, %s* %%_%d\n", assigneeLLType, assignedValReg, assigneeLLType, assigneePtrRegPostCast
             ));
