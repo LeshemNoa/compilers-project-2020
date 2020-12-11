@@ -50,10 +50,10 @@ public class LLVMVisitor implements Visitor{
     @Override
     public void visit(Program program) {
         LLVMProgram.append(HELPER_METHODS + "\n");
+        program.mainClass().accept(this);
         for(ClassDecl classDecl : forest.getRoots()){
             recursiveVisitTree(classDecl);
         }
-        program.mainClass().accept(this);
     }
 
     private void recursiveVisitTree(ClassDecl classDecl){
@@ -68,13 +68,11 @@ public class LLVMVisitor implements Visitor{
         List<STSymbol> methods = this.vtables.get(classDecl.name());
         if(methods == null || methods.size() == 0) return "";
 
-        StringBuilder res = new StringBuilder("@." + classDecl.name() + "_vtable = global [" + methods.size() + " x i8*] [\n");
-
-        res.append("\t").append(methodDeclToVTElem((MethodDecl) methods.get(0).declaration(), classDecl.name()));
-        for(int i = 1; i < methods.size(); i++){
-            res.append(",\n\t").append(methodDeclToVTElem((MethodDecl) methods.get(0).declaration(), classDecl.name()));
+        StringBuilder res = new StringBuilder("\n\n@." + classDecl.name() + "_vtable = global [" + methods.size() + " x i8*] [\n");
+        for(STSymbol method : methods){
+            res.append("\t").append(methodDeclToVTElem((MethodDecl) method.declaration(), classDecl.name())).append(",\n");
         }
-        res.append("\n]\n\n");
+        res.append("]\n\n");
         return res.toString();
     }
 
@@ -162,7 +160,7 @@ public class LLVMVisitor implements Visitor{
 
     @Override
     public void visit(MainClass mainClass) {
-        LLVMProgram.append("define i32 @main() {");
+        LLVMProgram.append("define i32 @main() {\n");
         mainClass.mainStatement().accept(this);
         LLVMProgram.append("\tret i32 0\n}");
     }
@@ -525,11 +523,20 @@ public class LLVMVisitor implements Visitor{
 
     @Override
     public void visit(MethodCallExpr e) {
-        e.ownerExpr().accept(this);
+        boolean thisExpr = false;
+        if (!e.ownerExpr().getClass().getName().equals("ast.ThisExpr")) {
+            e.ownerExpr().accept(this);
+        } else {
+            thisExpr = true;
+        }
         //now reg number methodCurrRegIndex - 1 is holding the i8* to the object
-        int ownerReg = methodCurrRegIndex;
+        int ownerReg = methodCurrRegIndex-1;
         //Now access the vtable
-        LLVMProgram.append(String.format("\t%%_%d = bitcast i8* %%_%d to i8***\n", methodCurrRegIndex++, methodCurrRegIndex - 1));
+        if (!thisExpr) {
+            LLVMProgram.append(String.format("\t%%_%d = bitcast i8* %%_%d to i8***\n", methodCurrRegIndex++, ownerReg));
+        } else {
+            LLVMProgram.append(String.format("\t%%_%d = bitcast i8* %%this to i8***\n", methodCurrRegIndex++));
+        }
         int vtableReg = methodCurrRegIndex;
         LLVMProgram.append(String.format("\t%%_%d = load i8**, i8*** %%_%d\n", methodCurrRegIndex++, ownerReg));
         int methodIndex = getMethodIndexInVtable(e);
@@ -537,7 +544,8 @@ public class LLVMVisitor implements Visitor{
                 "\t%%_%d = getelementptr i8*, i8** %%_%d, i32 %d\n", methodCurrRegIndex++, vtableReg, methodIndex));
         int methodReg = methodCurrRegIndex;
         LLVMProgram.append(String.format(
-                "\t%%_%d = load i8*, i8** %%_%d\n", methodCurrRegIndex++, methodCurrRegIndex - 1));
+                "\t%%_%d = load i8*, i8** %%_%d\n", methodCurrRegIndex, methodCurrRegIndex - 1));
+        methodCurrRegIndex++;
         //put actuals into registers
         int numberOfActuals = e.actuals().size();
         List<Integer> actualsRegs = new ArrayList<>(numberOfActuals);
@@ -693,7 +701,7 @@ public class LLVMVisitor implements Visitor{
             allocationSize += getSizeInBytes(symbol);
         }
         int objectAdressReg = methodCurrRegIndex++;
-        String allocate = String.format("\t%%_%d = call i8* @calloc(i32 1, i32 %d)", objectAdressReg, allocationSize);
+        String allocate = String.format("\t%%_%d = call i8* @calloc(i32 1, i32 %d)\n", objectAdressReg, allocationSize);
         int castedI8Pointer = methodCurrRegIndex++;
         String bitcast = String.format("\t%%_%d = bitcast i8* %%_%d to i8***\n", castedI8Pointer, objectAdressReg);
         int vtableAddress = methodCurrRegIndex++;
