@@ -336,7 +336,7 @@ public class LLVMVisitor implements Visitor{
         if (enclosingST.contains(assigneeName, false)) {
             assigneePtrReg = methodCurrRegIndex++;
             LLVMProgram.append(String.format(
-                    "\t%%_%d = load i32*, i32** %%%s", assigneePtrReg, assigneeName
+                    "\t%%_%d = load i32*, i32** %%%s\n", assigneePtrReg, assigneeName
             ));
         }
         /*
@@ -367,7 +367,7 @@ public class LLVMVisitor implements Visitor{
                 "arr_alloc%d:\n", methodCurrLabelIndex++
         ));
         LLVMProgram.append(String.format(
-                "\t%%_%d = add i32 %%%d, 1", methodCurrRegIndex++, indexReg
+                "\t%%_%d = add i32 %%_%d, 1\n", methodCurrRegIndex++, indexReg
         )); // indexReg value is now outdated.
         LLVMProgram.append(String.format(
                 "\t%%_%d = getelementptr i32, i32* %%_%d, i32 %%_%d\n", methodCurrRegIndex, assigneePtrReg, methodCurrRegIndex-1
@@ -375,7 +375,7 @@ public class LLVMVisitor implements Visitor{
         int assignLocPtr = methodCurrRegIndex++;
         assignArrayStatement.rv().accept(this);
         LLVMProgram.append(String.format(
-                "\tstore i32 %%_%d, i32* %%_%d", methodCurrRegIndex-1, assignLocPtr
+                "\tstore i32 %%_%d, i32* %%_%d\n", methodCurrRegIndex-1, assignLocPtr
         ));
     }
 
@@ -508,7 +508,7 @@ public class LLVMVisitor implements Visitor{
         ));
 
         //put value into register
-        String updateIndex = String.format("\t%%_%d = add i32* %%_%d, 1\n", methodCurrRegIndex++, indexReg);
+        String updateIndex = String.format("\t%%_%d = add i32 %%_%d, 1\n", methodCurrRegIndex++, indexReg);
         StringBuilder getElem = new StringBuilder(String.format(
                 "\t%%_%d = getelementptr i32, i32* %%_%d, i32 %%_%d\n", methodCurrRegIndex, arrayPointerReg, methodCurrRegIndex-1));
         methodCurrRegIndex++;
@@ -699,9 +699,9 @@ public class LLVMVisitor implements Visitor{
         int actualSize = methodCurrRegIndex;
         String updateSize = String.format("\t%%_%d = add i32 %%_%d, 1\n",methodCurrRegIndex++, arraySizeReg);
         int lenReg = methodCurrRegIndex - 1;
-        lastCallocReg = methodCurrRegIndex;
         String allocate = String.format("\t%%_%d = call i8* @calloc(i32 4, i32 %%_%d)\n", methodCurrRegIndex++, lenReg);
         int arrayReg = methodCurrRegIndex;
+        lastCallocReg = methodCurrRegIndex;
         String bitcast = String.format("\t%%_%d = bitcast i8* %%_%d to i32*\n", methodCurrRegIndex, methodCurrRegIndex - 1);
         methodCurrRegIndex++;
         String inputSize = String.format("\tstore i32 %%_%d, i32* %%_%d\n", actualSize, arrayReg);
