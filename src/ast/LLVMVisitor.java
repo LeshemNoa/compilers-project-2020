@@ -480,7 +480,6 @@ public class LLVMVisitor implements Visitor{
         e.arrayExpr().accept(this);
         //now register number methodCurrRegIndex - 1 is the i8* pointer to the pointer to the array
 
-        //int arrayPointerReg = i8PointerToIntArrayPointer();
         int arrayPointerReg = methodCurrRegIndex - 1;
 
         //check if index is not out of bounds
@@ -503,27 +502,12 @@ public class LLVMVisitor implements Visitor{
         LLVMProgram.append(updateIndex).append(getElem.toString());
     }
 
-    /**
-     * assuming that methodCurrRegIndex - 1 is holding the i8* that is a pointer to the i32* of the array,
-     * this puts the i32* in a register to be accesed
-     * @return the number of the register that is holding the i32* that is the array
-     */
-    /*private int i8PointerToIntArrayPointer(){
-        String bitCast = "\t%_" + (methodCurrRegIndex++) + " = bitcast i8* %_";
-        bitCast = bitCast.concat((methodCurrRegIndex - 2) + " to i32**\n");
-        int arrayPointerReg = methodCurrRegIndex;
-        String loadPointer = "\t%_" + (methodCurrRegIndex++) + " = load i32*, i32** %_";
-        loadPointer = loadPointer.concat((methodCurrRegIndex - 2) + "\n");
-        LLVMProgram.append(bitCast).append(loadPointer);
-        return arrayPointerReg;
-    }*/
 
     @Override
     public void visit(ArrayLengthExpr e) {
         //get pointer to array
         e.arrayExpr().accept(this);
         int arrayPointerReg = methodCurrRegIndex - 1;
-        //int arrayPointerReg = i8PointerToIntArrayPointer();
 
         LLVMProgram.append(String.format("\t%%_%d = load i32, i32* %%_%d\n", methodCurrRegIndex++, arrayPointerReg));
     }
