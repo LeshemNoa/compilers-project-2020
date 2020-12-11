@@ -710,6 +710,7 @@ public class LLVMVisitor implements Visitor{
                 vtableAddress, vtableSize, vtableSize, e.classId());
         String storeVtable = String.format("\tstore i8** %%_%d, i8*** %%_%d\n", vtableAddress, castedI8Pointer);
         LLVMProgram.append(allocate).append(bitcast).append(getVtable).append(storeVtable);
+        LLVMProgram.append(String.format("\t%%_%d = add i8* %%_%d, 0\n", methodCurrRegIndex++, objectAdressReg));
         //memset to 0?
     }
 
