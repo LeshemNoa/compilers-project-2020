@@ -233,14 +233,14 @@ public class LLVMVisitor implements Visitor{
         LLVMProgram.append(String.format(
                 "if%d:\n", methodCurrLabelIndex++
         ));
+        int elseLabelIndex = methodCurrLabelIndex++;
+        int end_if = methodCurrLabelIndex++;
         ifStatement.thencase().accept(this);
-        LLVMProgram.append(String.format("\tbr label %%if%d\n", methodCurrLabelIndex + 1));
-        LLVMProgram.append(String.format(
-                "if%d:\n", methodCurrLabelIndex++
-        ));
+        LLVMProgram.append(String.format("\tbr label %%if%d\n", end_if));
+        LLVMProgram.append(String.format("if%d:\n", elseLabelIndex));
         ifStatement.elsecase().accept(this);
-        LLVMProgram.append(String.format("\tbr label %%if%d\n", methodCurrLabelIndex));
-        LLVMProgram.append(String.format("if%d:\n", methodCurrLabelIndex++));
+        LLVMProgram.append(String.format("\tbr label %%if%d\n", end_if));
+        LLVMProgram.append(String.format("if%d:\n", end_if));
     }
 
     @Override
