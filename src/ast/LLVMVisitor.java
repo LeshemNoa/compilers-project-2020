@@ -710,18 +710,17 @@ public class LLVMVisitor implements Visitor{
         for(STSymbol symbol : instanceTemplates.get(e.classId())){
             allocationSize += getSizeInBytes(symbol);
         }
-        int objectAdressReg = methodCurrRegIndex++;
-        lastCallocReg = methodCurrRegIndex;
-        String allocate = String.format("\t%%_%d = call i8* @calloc(i32 1, i32 %d)\n", objectAdressReg, allocationSize);
+        int objectAddressReg = methodCurrRegIndex++;
+        lastCallocReg = objectAddressReg;
+        String allocate = String.format("\t%%_%d = call i8* @calloc(i32 1, i32 %d)\n", objectAddressReg, allocationSize);
         int castedI8Pointer = methodCurrRegIndex++;
-        String bitcast = String.format("\t%%_%d = bitcast i8* %%_%d to i8***\n", castedI8Pointer, objectAdressReg);
+        String bitcast = String.format("\t%%_%d = bitcast i8* %%_%d to i8***\n", castedI8Pointer, objectAddressReg);
         int vtableAddress = methodCurrRegIndex++;
         int vtableSize = vtables.get(e.classId()).size();
         String getVtable = String.format("\t%%_%d = getelementptr [%d x i8*], [%d x i8*]* @.%s_vtable, i32 0, i32 0\n",
                 vtableAddress, vtableSize, vtableSize, e.classId());
         String storeVtable = String.format("\tstore i8** %%_%d, i8*** %%_%d\n", vtableAddress, castedI8Pointer);
         LLVMProgram.append(allocate).append(bitcast).append(getVtable).append(storeVtable);
-        LLVMProgram.append(String.format("\t%%_%d = add i8* %%_%d, i8* 0\n", methodCurrRegIndex++, objectAdressReg));
         //memset to 0?
     }
 
