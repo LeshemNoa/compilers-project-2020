@@ -297,10 +297,10 @@ public class LLVMVisitor implements Visitor{
             ));
             return;
         }
-        String enclosingClassName = enclosingST.scopeName();
+        String enclosingClassName = assignStatement.enclosingScope().getParent().scopeName();
         List<STSymbol> classInstanceShape = instanceTemplates.get(enclosingClassName);
         /*
-          Case 2: assignee is a field
+          Case 2: assignee is a field of %this
          */
         if (classInstanceHasField(classInstanceShape, assigneeName)) {
             assignStatement.rv().accept(this);
@@ -327,14 +327,14 @@ public class LLVMVisitor implements Visitor{
     @Override
     public void visit(AssignArrayStatement assignArrayStatement) {
         String assigneeName = assignArrayStatement.lv();
-        SymbolTable enclosingST = STLookup.findDeclTable(assigneeName, forest, assignArrayStatement.enclosingScope(), programSymbolTable) ;
-        String enclosingClassName = enclosingST.getParent().scopeName();
+        //SymbolTable enclosingST = STLookup.findDeclTable(assigneeName, forest, assignArrayStatement.enclosingScope(), programSymbolTable) ;
+        String enclosingClassName = assignArrayStatement.enclosingScope().getParent().scopeName();
         List<STSymbol> classInstanceShape = instanceTemplates.get(enclosingClassName);
         int assigneePtrReg;
         /*
           Case 1: assignee is a local variable in the method
          */
-        if (enclosingST.contains(assigneeName, false)) {
+        if (assignArrayStatement.enclosingScope().contains(assigneeName, false)) {
             assigneePtrReg = methodCurrRegIndex++;
             LLVMProgram.append(String.format(
                     "\t%%_%d = load i32*, i32** %%%s\n", assigneePtrReg, assigneeName
@@ -350,9 +350,12 @@ public class LLVMVisitor implements Visitor{
                     "\t%%_%d = getelementptr i8, i8* %%this, i32 %d\n", assigneePtrReg, offset
             ));
             methodCurrRegIndex++;
+            LLVMProgram.append(String.format(
+                    "\t%%_%d = bitcast i8* %%_%d to i32**\n", methodCurrRegIndex++, assigneePtrReg
+            ));
             int assigneePtrRegPostCast = methodCurrRegIndex;
             LLVMProgram.append(String.format(
-                    "\t%%_%d = bitcast i8* %%_%d to i32*\n", assigneePtrRegPostCast, assigneePtrReg
+                    "\t%%_%d = load i32*, i32** %%_%d\n", assigneePtrRegPostCast, methodCurrRegIndex - 1
             ));
             methodCurrRegIndex++;
             assigneePtrReg = assigneePtrRegPostCast;
