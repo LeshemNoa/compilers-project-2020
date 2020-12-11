@@ -1,7 +1,7 @@
 package ast;
 import java.util.*;
 
-public class LlvmVisitor implements Visitor{
+public class LLVMVisitor implements Visitor{
 
     private static final String HELPER_METHODS = "declare i8* @calloc(i32, i32)\n" +
             "declare i32 @printf(i8*, ...)\n" +
@@ -34,13 +34,17 @@ public class LlvmVisitor implements Visitor{
     private int methodCurrRegIndex;
     private int methodCurrLabelIndex;
 
-    public LlvmVisitor(Program program){
+    public LLVMVisitor(Program program){
         LLVMProgram = new StringBuilder();
         forest = new InheritanceForest(program);
         programSymbolTable = new SymbolTable(program);
         List<Map<String, List<STSymbol>>> maps = STLookup.createProgramMaps(programSymbolTable, forest);
         vtables = maps.get(0);
         instanceTemplates = maps.get(1);
+    }
+
+    public String getLLVMProgram() {
+        return LLVMProgram.toString();
     }
 
     @Override
@@ -89,10 +93,10 @@ public class LlvmVisitor implements Visitor{
 
     private String getLLVMType(AstType type){
         String typeName = type.getClass().getName();
-        if(typeName.equals("IntAstType")) return "i32";
-        if(typeName.equals("IntArrayAstType")) return "i32*";
-        if(typeName.equals("BoolAstType")) return "i1";
-        if(typeName.equals("RefType")) return "i8*";
+        if(typeName.equals("ast.IntAstType")) return "i32";
+        if(typeName.equals("ast.IntArrayAstType")) return "i32*";
+        if(typeName.equals("ast.BoolAstType")) return "i1";
+        if(typeName.equals("ast.RefType")) return "i8*";
         else{
             System.out.println("problem in getLlvmType");
             return null;
@@ -158,7 +162,9 @@ public class LlvmVisitor implements Visitor{
 
     @Override
     public void visit(MainClass mainClass) {
-
+        LLVMProgram.append("define i32 @main() {");
+        mainClass.mainStatement().accept(this);
+        LLVMProgram.append("\tret i32 0\n}");
     }
 
     @Override
@@ -575,8 +581,8 @@ public class LlvmVisitor implements Visitor{
     }
 
     private String findInvokingClassNameForMethodCall(MethodCallExpr e){
-        if(e.ownerExpr().getClass().getName().equals("ThisExpr")) return e.enclosingScope().getParent().scopeName();
-        if(e.ownerExpr().getClass().getName().equals("NewObjectExpr")){
+        if(e.ownerExpr().getClass().getName().equals("ast.ThisExpr")) return e.enclosingScope().getParent().scopeName();
+        if(e.ownerExpr().getClass().getName().equals("ast.NewObjectExpr")){
             NewObjectExpr owner = (NewObjectExpr)e.ownerExpr();
             return owner.classId();
         }
