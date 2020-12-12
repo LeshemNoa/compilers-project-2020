@@ -575,11 +575,15 @@ public class LLVMVisitor implements Visitor{
         methodCurrRegIndex++;
         //put actuals into registers
         int numberOfActuals = e.actuals().size();
-        List<Integer> actualsRegs = new ArrayList<>(numberOfActuals);
+        List<String> actualsRegs = new ArrayList<>(numberOfActuals);
         for(int i = 0; i < e.actuals().size(); i++){
             Expr actual = e.actuals().get(i);
-            actual.accept(this);
-            actualsRegs.add(i, methodCurrRegIndex-1);
+            if (actual.getClass().getName().equals("ast.ThisExpr")) {
+                actualsRegs.add(i, "%this");
+            } else {
+                actual.accept(this);
+                actualsRegs.add(i, String.format("%%_%d", methodCurrRegIndex-1));
+            }
         }
         //find out return type
         String invokerClass = findInvokingClassNameForMethodCall(e);
@@ -606,7 +610,7 @@ public class LLVMVisitor implements Visitor{
                     "\t%%_%d = call %s %%_%d(i8* %%_%d", methodCurrRegIndex++, returnType, methodPointer, ownerReg));
         }
         for(int i = 0; i < actualsRegs.size(); i++){
-            callCommand.append(String.format(", %s %%_%d", getLLVMType(formals.get(i).type()), actualsRegs.get(i)));
+            callCommand.append(String.format(", %s %s", getLLVMType(formals.get(i).type()), actualsRegs.get(i)));
         }
         callCommand.append(")\n");
         LLVMProgram.append(callCommand);
