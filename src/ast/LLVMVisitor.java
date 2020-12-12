@@ -760,7 +760,7 @@ public class LLVMVisitor implements Visitor{
     public void visit(NotExpr e) {
         e.e().accept(this);
         int valReg = methodCurrRegIndex-1;
-        LLVMProgram.append(String.format("\t%%_%d = sub i1 1, %s\n", methodCurrRegIndex++, valReg));
+        LLVMProgram.append(String.format("\t%%_%d = sub i1 1, %%_%d\n", methodCurrRegIndex++, valReg));
     }
 
     @Override
