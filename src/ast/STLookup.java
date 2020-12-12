@@ -91,6 +91,9 @@ public class STLookup {
 
     /**
      * Returns list of methods, both declared and inherited, in provided class.
+     * There is somthing somewhat tricky here and that is that the parent methods need to apeer
+     * in the order in the child's vtable.
+     * This has to do with inheritance in runtime
      * @param classDecl      declaration node for said class
      * @param classTable     The class's symbol table
      * @param parentMethods  List of methods inherited from the superclass
@@ -99,17 +102,24 @@ public class STLookup {
     private static List<STSymbol> getMethodSymbols(ClassDecl classDecl, SymbolTable classTable, List<STSymbol> parentMethods){
         Set<String> localDeclNames = new HashSet<>();
         List<STSymbol> localDecls = new ArrayList<>();
-
-        for(MethodDecl method : classDecl.methoddecls()){
-            localDecls.add(classTable.getSymbol(method.name(), true));
-            localDeclNames.add(method.name());
+        for(MethodDecl methodDecl : classDecl.methoddecls()){
+            localDecls.add(classTable.getSymbol(methodDecl.name(), true));
+            localDeclNames.add(methodDecl.name());
         }
 
+        int addedFromLocal = 0;
         List<STSymbol> res = new ArrayList<>();
+
         for(STSymbol symbol : parentMethods){
             if (!localDeclNames.contains(symbol.name())) res.add(symbol);
+            else{
+                res.add(localDecls.get(addedFromLocal++));
+            }
         }
-        res.addAll(localDecls);
+
+        for(; addedFromLocal < localDecls.size(); addedFromLocal++){
+            res.add(localDecls.get(addedFromLocal));
+        }
 
         return res;
     }
@@ -130,11 +140,17 @@ public class STLookup {
             localDeclNames.add(field.name());
         }
 
+        int addedFromLocal = 0;
         List<STSymbol> res = new ArrayList<>();
         for(STSymbol symbol : parentFields){
             if (!localDeclNames.contains(symbol.name())) res.add(symbol);
+            else{
+                res.add(localDecls.get(addedFromLocal++));
+            }
         }
-        res.addAll(localDecls);
+        for(; addedFromLocal < localDecls.size(); addedFromLocal++){
+            res.add(localDecls.get(addedFromLocal));
+        }
 
         return res;
     }
