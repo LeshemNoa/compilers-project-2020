@@ -53,10 +53,10 @@ public class InheritanceForest {
 	private ArrayList<ForestNode> trees;
 	private HashMap<String, ForestNode> nodeMap;
 	private MainClass mainClass;
-	private boolean isLegalTree; //do we want to have an enum of which error acurred?
+	private boolean isLegalForest;
 	
 	public InheritanceForest(Program prog) {
-		isLegalTree = true;
+		isLegalForest = true;
 		this.mainClass = prog.mainClass();
 		trees = new ArrayList<>();
 		nodeMap = new HashMap<>();
@@ -73,7 +73,7 @@ public class InheritanceForest {
 			if(cls.superName() == null) {
 				//semantic check - no name repetition
 				if(nodeMap.containsKey(cls.name())){
-					isLegalTree = false;
+					isLegalForest = false;
 					return;
 				}
 
@@ -124,9 +124,9 @@ public class InheritanceForest {
 		//5. super is defined before self
 		if(!allNames.contains(superName) || superName.equals(cls.name()) || superName.equals(mainClass.name()) ||
 				nodeMap.containsKey(cls.name()) || nodeMap.get(superName).value.lineNumber >= cls.lineNumber){
-			isLegalTree = false;
+			isLegalForest = false;
 		}
-		return isLegalTree;
+		return isLegalForest;
 	}
 	
 	
@@ -215,7 +215,7 @@ public class InheritanceForest {
 	 * Meant for semantic checks of class declerations
 	 * @return boolean value representing the legality of the tree
 	 */
-	public boolean isLegalTree(){return this.isLegalTree;}
+	public boolean isLegalForest(){return this.isLegalForest;}
 	
 }
 
