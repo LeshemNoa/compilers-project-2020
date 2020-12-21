@@ -5,6 +5,7 @@ import java.util.*;
 public class SymbolTableBuilder {
     Program program;
     SymbolTable programSymTable;
+    boolean buildSuccessful;
 
     public SymbolTableBuilder(Program program, SymbolTable programSymTable) {
         this.program = program;
@@ -21,6 +22,11 @@ public class SymbolTableBuilder {
     private void addFieldSymbols(ClassDecl classDecl, SymbolTable declST) {
         List<VarDecl> fields = classDecl.fields();
         for (VarDecl field : fields) {
+            // no field redeclaration
+            if (declST.contains(field.name(), false)) {
+                this.buildSuccessful = false;
+                return;
+            }
             STSymbol fieldSymbol = new STSymbol(field.name(), STSymbol.SymbolKind.FIELD, classDecl.name(), field);
             declST.addEntry(field.name(), fieldSymbol);
         }
@@ -35,6 +41,11 @@ public class SymbolTableBuilder {
     private void addMethodSymbols(ClassDecl classDecl, SymbolTable classDeclST) {
         List<MethodDecl> methods = classDecl.methoddecls();
         for (MethodDecl method : methods) {
+            // No overloading
+            if (classDeclST.contains(method.name(), true)) {
+                this.buildSuccessful = false;
+                return;
+            }
             method.setEnclosingScope(classDeclST);
             SymbolTable methodST = new SymbolTable(classDeclST, method.name());
             addVariableSymbols(method, methodST);
@@ -53,17 +64,26 @@ public class SymbolTableBuilder {
         List<VarDecl> variables = method.vardecls();
         List<FormalArg> arguments = method.formals();
         for (VarDecl variable : variables) {
+            // no variable redeclaration
+            if (methodST.contains(variable.name(), false)) {
+                buildSuccessful = false;
+                return;
+            }
             variable.setEnclosingScope(methodST);
             STSymbol variableSymbol = new STSymbol(variable.name(), STSymbol.SymbolKind.VAR, method.enclosingScope().scopeName(), variable);
             methodST.addEntry(variable.name(), variableSymbol);
         }
         for (FormalArg arg : arguments) {
+            // no variable redeclaration for formals too
+            if (methodST.contains(arg.name(), false)) {
+                buildSuccessful = false;
+                return;
+            }
             arg.setEnclosingScope(methodST);
             STSymbol argSymbol = new STSymbol(arg.name(), STSymbol.SymbolKind.VAR, method.enclosingScope().scopeName(), arg);
             methodST.addEntry(arg.name(), argSymbol);
         }
         for(Statement statement : method.body()){
-//            statement.setEnclosingScope(methodST);
             setEnclosingScopeForThisExpr(statement, methodST);
         }
         setEnclosingScopeForThisExpr(method.ret(), methodST);
@@ -133,8 +153,8 @@ public class SymbolTableBuilder {
     private void setEnclosingScopeForThisExpr(Expr e, SymbolTable methodST){
         e.setEnclosingScope(methodST);
         String classTypeName = e.getClass().getName();
-        String binars[] = {"ast.AddExpr", "ast.AndExpr", "ast.LtExpr", "ast.MultExpr", "ast.SubtractExpr"};
-        if(Arrays.asList(binars).contains(classTypeName)){
+        String[] binaryOps = {"ast.AddExpr", "ast.AndExpr", "ast.LtExpr", "ast.MultExpr", "ast.SubtractExpr"};
+        if(Arrays.asList(binaryOps).contains(classTypeName)){
             setEnclosingScopeForThisExpr(((BinaryExpr)e).e1(), methodST);
             setEnclosingScopeForThisExpr(((BinaryExpr)e).e2(), methodST);
             return;
@@ -176,7 +196,11 @@ public class SymbolTableBuilder {
      * the method symbols have a pointer to their own scope's symbol table.
      */
     private void buildProgramSymbolTable() {
+        this.buildSuccessful = true;
         for (ClassDecl classdecl : program.classDecls()) {
+            if (!buildSuccessful) {
+                return;
+            }
             classdecl.setEnclosingScope(programSymTable);
             SymbolTable classDeclST = new SymbolTable(programSymTable, classdecl.name());
             addMethodSymbols(classdecl, classDeclST);
