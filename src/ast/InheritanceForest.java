@@ -53,8 +53,10 @@ public class InheritanceForest {
 	private ArrayList<ForestNode> trees;
 	private HashMap<String, ForestNode> nodeMap;
 	private MainClass mainClass;
+	private boolean isLegalTree; //do we want to have an enum of which error acurred?
 	
 	public InheritanceForest(Program prog) {
+		isLegalTree = true;
 		this.mainClass = prog.mainClass();
 		trees = new ArrayList<>();
 		nodeMap = new HashMap<>();
@@ -65,6 +67,12 @@ public class InheritanceForest {
 		/*add all roots to the ArrayList trees*/
 		for(ClassDecl cls : prog.classDecls()) {
 			if(cls.superName() == null) {
+				//semantic check - no name repetition
+				if(nodeMap.containsKey(cls.name())){
+					isLegalTree = false;
+					return;
+				}
+
 				tmp = new ForestNode(null, cls);
 				trees.add(tmp);
 				nodeMap.put(cls.name(), tmp);
@@ -75,21 +83,64 @@ public class InheritanceForest {
 		}
 		
 		LLclasses.node curr;
+		String superName;
+		//meant for semantic check
+		int nodeMapPrevSize = nodeMap.size();
+
 		/*add all other classes to the forest*/
 		while(classBag.head != null) {
-			if(nodeMap.containsKey(classBag.head.value.superName())){
+			superName = classBag.head.value.superName();
+			//semantic check - can't extend main class
+			if(superName.equals(mainClass.name())){
+				isLegalTree = false;
+				return;
+			}
+			if(nodeMap.containsKey(superName)){
+				//semantic check - super is defined before child
+				if(nodeMap.get(superName).value.lineNumber >= classBag.head.value.lineNumber){
+					isLegalTree = false;
+					return;
+				}
+				//semantic check - no name repetition
+				if(nodeMap.containsKey(classBag.head.value.name())){
+					isLegalTree = false;
+					return;
+				}
+
 				addToForest(classBag.head.value);
 				classBag.removeHead();
 				continue;
 			}
 			curr = classBag.head;
 			while(curr.next != null) {
-				if(nodeMap.containsKey(curr.next.value.superName())) {
+				superName = curr.next.value.superName();
+				if(nodeMap.containsKey(superName)) {
+					//semantic check - super is defined before child
+					if(nodeMap.get(superName).value.lineNumber >= curr.next.value.lineNumber){
+						isLegalTree = false;
+						return;
+					}
+					//semantic check - no name repetition
+					if(nodeMap.containsKey(curr.next.value.name())){
+						isLegalTree = false;
+						return;
+					}
+
 					addToForest(curr.next.value);
 					classBag.removeNext(curr);
 				}
 				else curr = curr.next;
 			}
+
+			/*semantic check
+			if no classes were added (we know that there are classes to add because we entered the while)
+			than this means that there is at least one class with undefined super
+			 */
+			if(nodeMap.size() == nodeMapPrevSize){
+				isLegalTree = false;
+				return;
+			}
+			nodeMapPrevSize = nodeMap.size();
 		}
 	}
 	
@@ -174,6 +225,12 @@ public class InheritanceForest {
 	public ClassDecl getSuper(ClassDecl cls) {
 		return getSuper(cls.name());
 	}
+
+	/**
+	 * Meant for semantic checks of class declerations
+	 * @return boolean value representing the legality of the tree
+	 */
+	public boolean isLegalTree(){return this.isLegalTree;}
 	
 }
 
