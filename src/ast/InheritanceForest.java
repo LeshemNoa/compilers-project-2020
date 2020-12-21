@@ -53,18 +53,30 @@ public class InheritanceForest {
 	private ArrayList<ForestNode> trees;
 	private HashMap<String, ForestNode> nodeMap;
 	private MainClass mainClass;
+	private boolean isLegalForest;
 	
 	public InheritanceForest(Program prog) {
+		isLegalForest = true;
 		this.mainClass = prog.mainClass();
 		trees = new ArrayList<>();
 		nodeMap = new HashMap<>();
 		
 		ForestNode tmp;
 		LLclasses classBag = new LLclasses();
+
+		//for semantic checks
+		Set<String> allClassDeclNames = new HashSet<>();
 		
 		/*add all roots to the ArrayList trees*/
 		for(ClassDecl cls : prog.classDecls()) {
+			allClassDeclNames.add(cls.name());
 			if(cls.superName() == null) {
+				//semantic check - no name repetition
+				if(nodeMap.containsKey(cls.name())){
+					isLegalForest = false;
+					return;
+				}
+
 				tmp = new ForestNode(null, cls);
 				trees.add(tmp);
 				nodeMap.put(cls.name(), tmp);
@@ -75,22 +87,46 @@ public class InheritanceForest {
 		}
 		
 		LLclasses.node curr;
+		String superName;
+
 		/*add all other classes to the forest*/
 		while(classBag.head != null) {
-			if(nodeMap.containsKey(classBag.head.value.superName())){
+			superName = classBag.head.value.superName();
+			//semantic checks
+			if(!legalClassDecl(classBag.head.value, superName, allClassDeclNames)) return;
+
+			if(nodeMap.containsKey(superName)){
 				addToForest(classBag.head.value);
 				classBag.removeHead();
 				continue;
 			}
 			curr = classBag.head;
 			while(curr.next != null) {
-				if(nodeMap.containsKey(curr.next.value.superName())) {
+				superName = curr.next.value.superName();
+				//semantic checks
+				if(!legalClassDecl(curr.next.value, superName, allClassDeclNames)) return;
+
+				if(nodeMap.containsKey(superName)) {
 					addToForest(curr.next.value);
 					classBag.removeNext(curr);
 				}
 				else curr = curr.next;
 			}
 		}
+	}
+	
+	private boolean legalClassDecl(ClassDecl cls, String superName, Set<String> allNames){
+		//checks:
+		//1. super is defined
+		//2. super is not self
+		//3. super is not main
+		//4. class name is not a repetition
+		//5. super is defined before self
+		if(!allNames.contains(superName) || superName.equals(cls.name()) || superName.equals(mainClass.name()) ||
+				nodeMap.containsKey(cls.name()) || nodeMap.get(superName).value.lineNumber >= cls.lineNumber){
+			isLegalForest = false;
+		}
+		return isLegalForest;
 	}
 	
 	
@@ -174,6 +210,12 @@ public class InheritanceForest {
 	public ClassDecl getSuper(ClassDecl cls) {
 		return getSuper(cls.name());
 	}
+
+	/**
+	 * Meant for semantic checks of class declerations
+	 * @return boolean value representing the legality of the tree
+	 */
+	public boolean isLegalForest(){return this.isLegalForest;}
 	
 }
 
