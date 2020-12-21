@@ -63,9 +63,13 @@ public class InheritanceForest {
 		
 		ForestNode tmp;
 		LLclasses classBag = new LLclasses();
+
+		//for semantic checks
+		Set<String> allClassDeclNames = new HashSet<>();
 		
 		/*add all roots to the ArrayList trees*/
 		for(ClassDecl cls : prog.classDecls()) {
+			allClassDeclNames.add(cls.name());
 			if(cls.superName() == null) {
 				//semantic check - no name repetition
 				if(nodeMap.containsKey(cls.name())){
@@ -84,29 +88,14 @@ public class InheritanceForest {
 		
 		LLclasses.node curr;
 		String superName;
-		//meant for semantic check
-		int nodeMapPrevSize = nodeMap.size();
 
 		/*add all other classes to the forest*/
 		while(classBag.head != null) {
 			superName = classBag.head.value.superName();
-			//semantic check - can't extend main class
-			if(superName.equals(mainClass.name())){
-				isLegalTree = false;
-				return;
-			}
-			if(nodeMap.containsKey(superName)){
-				//semantic check - super is defined before child
-				if(nodeMap.get(superName).value.lineNumber >= classBag.head.value.lineNumber){
-					isLegalTree = false;
-					return;
-				}
-				//semantic check - no name repetition
-				if(nodeMap.containsKey(classBag.head.value.name())){
-					isLegalTree = false;
-					return;
-				}
+			//semantic checks
+			if(!legalClassDecl(classBag.head.value, superName, allClassDeclNames)) return;
 
+			if(nodeMap.containsKey(superName)){
 				addToForest(classBag.head.value);
 				classBag.removeHead();
 				continue;
@@ -114,34 +103,30 @@ public class InheritanceForest {
 			curr = classBag.head;
 			while(curr.next != null) {
 				superName = curr.next.value.superName();
-				if(nodeMap.containsKey(superName)) {
-					//semantic check - super is defined before child
-					if(nodeMap.get(superName).value.lineNumber >= curr.next.value.lineNumber){
-						isLegalTree = false;
-						return;
-					}
-					//semantic check - no name repetition
-					if(nodeMap.containsKey(curr.next.value.name())){
-						isLegalTree = false;
-						return;
-					}
+				//semantic checks
+				if(!legalClassDecl(curr.next.value, superName, allClassDeclNames)) return;
 
+				if(nodeMap.containsKey(superName)) {
 					addToForest(curr.next.value);
 					classBag.removeNext(curr);
 				}
 				else curr = curr.next;
 			}
-
-			/*semantic check
-			if no classes were added (we know that there are classes to add because we entered the while)
-			than this means that there is at least one class with undefined super
-			 */
-			if(nodeMap.size() == nodeMapPrevSize){
-				isLegalTree = false;
-				return;
-			}
-			nodeMapPrevSize = nodeMap.size();
 		}
+	}
+	
+	private boolean legalClassDecl(ClassDecl cls, String superName, Set<String> allNames){
+		//checks:
+		//1. super is defined
+		//2. super is not self
+		//3. super is not main
+		//4. class name is not a repetition
+		//5. super is defined before self
+		if(!allNames.contains(superName) || superName.equals(cls.name()) || superName.equals(mainClass.name()) ||
+				nodeMap.containsKey(cls.name()) || nodeMap.get(superName).value.lineNumber >= cls.lineNumber){
+			isLegalTree = false;
+		}
+		return isLegalTree;
 	}
 	
 	
