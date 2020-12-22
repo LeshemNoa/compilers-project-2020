@@ -1,8 +1,35 @@
 package ast;
 
+import java.util.*;
+
 public class SemanticChecksVisitor implements Visitor {
+
+    private InheritanceForest forest;
+    private SymbolTable programST;
+    private Map<String, List<STSymbol>> vtables;
+    private Map<String, List<STSymbol>> instanceTemplates;
+    private boolean isLegalProgram;
+
+    public SemanticChecksVisitor(){
+        isLegalProgram = true;
+    }
+
     @Override
     public void visit(Program program) {
+        forest = new InheritanceForest(program);
+        isLegalProgram = forest.isLegalForest();
+        if(!isLegalProgram) return;
+        programST = new SymbolTable(program);
+        //we need a getter to check if build was successful
+        //I think it should be a field of SymbolTable and not a field of the builder (or both)
+
+        List<Map<String, List<STSymbol>>> maps = STLookup.createProgramMaps(programST, forest);
+        vtables = maps.get(0);
+        instanceTemplates = maps.get(1);
+
+        for(ClassDecl classDecl : program.classDecls()){
+            classDecl.accept(this);
+        }
 
     }
 
