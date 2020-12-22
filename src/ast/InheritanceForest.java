@@ -175,6 +175,20 @@ public class InheritanceForest {
 		}
 		return res;
 	}
+
+	public boolean isA(String descendant, String ancestor){
+		//note that we could have just used getAncestors but this is more efficient
+		boolean res = false;
+		ClassDecl curr = nodeMap.get(descendant).value;
+		while(curr.superName() != null){
+			if(curr.superName().equals(ancestor)){
+				res = true;
+				break;
+			}
+			curr = nodeMap.get(curr.superName()).value;
+		}
+		return res;
+	}
 	
 	public ClassDecl getSuper(String className) {
 		ForestNode node = nodeMap.get(className).superNode;
@@ -209,6 +223,16 @@ public class InheritanceForest {
 	}
 	public ClassDecl getSuper(ClassDecl cls) {
 		return getSuper(cls.name());
+	}
+
+	public boolean isA(ClassDecl descendant, ClassDecl ancestor){
+		return isA(descendant.name(), ancestor.name());
+	}
+	public boolean isA(ClassDecl descendant, String ancestor){
+		return isA(descendant.name(), ancestor);
+	}
+	public boolean isA(String descendant, ClassDecl ancestor){
+		return isA(descendant, ancestor.name());
 	}
 
 	/**
