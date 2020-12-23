@@ -7,6 +7,10 @@ public class SymbolTableBuilder {
     SymbolTable programSymTable;
     boolean buildSuccessful;
 
+    public boolean isBuildSuccessful() {
+        return buildSuccessful;
+    }
+
     public SymbolTableBuilder(Program program, SymbolTable programSymTable) {
         this.program = program;
         this.programSymTable = programSymTable;
