@@ -71,7 +71,7 @@ public class InheritanceForest {
 		for(ClassDecl cls : prog.classDecls()) {
 			allClassDeclNames.add(cls.name());
 			if(cls.superName() == null) {
-				//semantic check - no name repetition
+				// semantic check - no name repetition (req 3)
 				if(nodeMap.containsKey(cls.name())){
 					isLegalForest = false;
 					return;
@@ -116,12 +116,13 @@ public class InheritanceForest {
 	}
 	
 	private boolean legalClassDecl(ClassDecl cls, String superName, Set<String> allNames){
-		//checks:
+		// checks:
 		//1. super is defined
 		//2. super is not self
-		//3. super is not main
+		//3. super is not main (req 2)
 		//4. class name is not a repetition
-		//5. super is defined before self
+		//5. super is defined before self (req 1)
+		// TODO: check for cycles in forest (req 1)
 		if(!allNames.contains(superName) || superName.equals(cls.name()) || superName.equals(mainClass.name()) ||
 				nodeMap.containsKey(cls.name()) || nodeMap.get(superName).value.lineNumber >= cls.lineNumber){
 			isLegalForest = false;
