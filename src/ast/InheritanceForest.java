@@ -178,6 +178,7 @@ public class InheritanceForest {
 	}
 
 	public boolean isA(String descendant, String ancestor){
+		if(descendant.equals(ancestor)) return true;
 		//note that we could have just used getAncestors but this is more efficient
 		boolean res = false;
 		ClassDecl curr = nodeMap.get(descendant).value;
