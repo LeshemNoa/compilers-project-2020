@@ -7,6 +7,10 @@ public class SymbolTableBuilder {
     SymbolTable programSymTable;
     boolean buildSuccessful;
 
+    public boolean isBuildSuccessful() {
+        return buildSuccessful;
+    }
+
     public SymbolTableBuilder(Program program, SymbolTable programSymTable) {
         this.program = program;
         this.programSymTable = programSymTable;
@@ -22,7 +26,7 @@ public class SymbolTableBuilder {
     private void addFieldSymbols(ClassDecl classDecl, SymbolTable declST) {
         List<VarDecl> fields = classDecl.fields();
         for (VarDecl field : fields) {
-            // no field redeclaration
+            // no field redeclaration (req 4)
             if (declST.contains(field.name(), false)) {
                 this.buildSuccessful = false;
                 return;
@@ -41,7 +45,7 @@ public class SymbolTableBuilder {
     private void addMethodSymbols(ClassDecl classDecl, SymbolTable classDeclST) {
         List<MethodDecl> methods = classDecl.methoddecls();
         for (MethodDecl method : methods) {
-            // No overloading
+            // No overloading (req 5)
             if (classDeclST.contains(method.name(), true)) {
                 this.buildSuccessful = false;
                 return;
@@ -64,7 +68,7 @@ public class SymbolTableBuilder {
         List<VarDecl> variables = method.vardecls();
         List<FormalArg> arguments = method.formals();
         for (VarDecl variable : variables) {
-            // no variable redeclaration
+            // no variable redeclaration (req 22)
             if (methodST.contains(variable.name(), false)) {
                 buildSuccessful = false;
                 return;
@@ -74,7 +78,7 @@ public class SymbolTableBuilder {
             methodST.addEntry(variable.name(), variableSymbol);
         }
         for (FormalArg arg : arguments) {
-            // no variable redeclaration for formals too
+            // no variable redeclaration for formals too (req 22)
             if (methodST.contains(arg.name(), false)) {
                 buildSuccessful = false;
                 return;

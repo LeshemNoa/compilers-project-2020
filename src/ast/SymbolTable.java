@@ -8,14 +8,23 @@ public class SymbolTable {
     private HashMap<String, STSymbol> entries;
     private  HashMap<String, STSymbol> methodEntries;
     private SymbolTable parentSymbolTable;
+    private boolean tableValid;
+
+    public boolean isTableValid() {
+        return tableValid;
+    }
 
     /**
      * Constructs a symbol table for the entire program
      */
     public SymbolTable(Program program) {
+        tableValid = true;
         this.parentSymbolTable = null;
         this.entries = new HashMap<>();
-        new SymbolTableBuilder(program, this);
+        SymbolTableBuilder stb = new SymbolTableBuilder(program, this);
+        if (!stb.isBuildSuccessful()) {
+            tableValid = false;
+        }
     }
 
     /**
