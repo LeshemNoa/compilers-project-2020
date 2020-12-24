@@ -10,7 +10,7 @@ public class SemanticChecksVisitor implements Visitor {
     private Map<String, List<STSymbol>> instanceTemplates;
     private boolean isLegalForest;
     private boolean isLegalST;
-    private boolean visitResult;
+    private boolean visitResult; //should be set to true at builder but any subsequent sets are to false
     private Set<String> definitelyInitialized;
 
     public SemanticChecksVisitor(){
@@ -105,6 +105,7 @@ public class SemanticChecksVisitor implements Visitor {
      * @return
      */
     private boolean sameStaticType(VariableIntroduction a, VariableIntroduction b){
+        //not the same ast type - return false
         if(!a.type().getClass().getName().equals(b.type().getClass().getName())) return false;
 
         if(a.type().getClass().getName().equals("ast.RefType")){
@@ -123,8 +124,9 @@ public class SemanticChecksVisitor implements Visitor {
      */
     private boolean isCovariant(AstType varToCheck, AstType toCheckFor){
         if(varToCheck.getClass().getName().equals(toCheckFor.getClass().getName())){
+            //both the same ast type - check which one
             if(!varToCheck.getClass().getName().equals("ast.RefType")){
-                //they are both the same non reference type - either int boolean or int[]
+                //they are both the same non reference type - either int, boolean or int[]
                 return true;
             }
             //now both are identifier, check if there is inheritance
@@ -135,21 +137,21 @@ public class SemanticChecksVisitor implements Visitor {
 
     @Override
     public void visit(MainClass mainClass) {
-
+        //TODO
     }
 
     /**
      * given an expression this method checks its type and returns it
-     * if it's a reference type this method makes sure to have the correct id
+     * if it's a reference type this method makes sure to have the correct id set
      * @param e
-     * @return AstType representing the type of the expression, null if the expression is not legal
+     * @return AstType representing the type of e, null if the expression is not legal
      */
     private AstType getExprType(Expr e){
-        String dinamicExprName = e.getClass().getName();
-
         if(isIntExpr(e)) return new IntAstType();
 
         if(isBooleanExpr(e)) return new BoolAstType();
+
+        String dinamicExprName = e.getClass().getName();
 
         String binaryOps[] = {"ast.AddExpr", "ast.SubtractExpr", "ast.LtExpr", "ast.MultExpr","ast.AndExpr"};
         if(Arrays.asList(binaryOps).contains(dinamicExprName)){
@@ -160,10 +162,10 @@ public class SemanticChecksVisitor implements Visitor {
         //int array
         if(dinamicExprName.equals("ast.NewIntArrayExpr")) return new IntArrayAstType();
 
-        //now we are left with: method caller, this, identifier, newObject
+        //now we are left with: MethodCallExpr, IdentifierExpr, NewObjectExpr ot ThisExpr
         if(dinamicExprName.equals("ast.IdentifierExpr")){
             IdentifierExpr ie = (IdentifierExpr)e;
-            //get node where identifier was declared
+            //get node where variable was declared
             AstNode decl = STLookup.getDeclNode(STLookup.findDeclTable(ie.id(),forest,e.enclosingScope(),programST), ie.id());
             return ((VariableIntroduction)decl).type();
         }
@@ -177,13 +179,17 @@ public class SemanticChecksVisitor implements Visitor {
             id = ((NewObjectExpr)e).classId();
         }
         else{ //the only possible expression left is ThisExpr
+            //we might want to check this explicitly because of possible unknowed bugs - Noa your input here
             id = e.enclosingScope().getParent().scopeName();
         }
         return new RefType(id);
     }
 
     /**
-     *
+     * This method checks if a given expression is of type int
+     * For illegal binary expressions it returns false
+     * Note that it doesn't check the legality of: ArrayLengthExpr or ArrayAccessExpr
+     * but simply assumes they are int
      * @param e
      * @return
      */
@@ -193,6 +199,7 @@ public class SemanticChecksVisitor implements Visitor {
 
         exprNames = new String[]{"ast.IntegerLiteralExpr", "ast.ArrayLengthExpr", "ast.ArrayAccessExpr"};
         if(Arrays.asList(exprNames).contains(dinamicExprName)){
+            //for ArrayLengthExpr and ArrayAccessExpr other places in the visitor should check legality
             return true;
         }
 
@@ -200,15 +207,15 @@ public class SemanticChecksVisitor implements Visitor {
         if(Arrays.asList(exprNames).contains(dinamicExprName)){
             BinaryExpr be = (BinaryExpr)e;
             //both need to be int
-            if(!isIntExpr(be.e1()) || !isIntExpr(be.e2())) return false;
-            return true;
+            return isIntExpr(be.e1()) && isIntExpr(be.e2());
         }
-
+        //if we're here than the Expr doesn't fit an int type
         return false;
     }
 
     /**
-     *
+     * This method checks if a given expression is of type boolean
+     * For an illegal and expressions it returns false
      * @param e
      * @return
      */
@@ -221,24 +228,25 @@ public class SemanticChecksVisitor implements Visitor {
         if(dinamicExprName.equals("ast.AndExpr")){
             AndExpr ae = (AndExpr)e;
             //both need to be boolean
-            if(!isBooleanExpr(ae.e1()) || !isBooleanExpr(ae.e2())) return false;
-            return true;
+            return isBooleanExpr(ae.e1()) && isBooleanExpr(ae.e2());
         }
 
         if(dinamicExprName.equals("ast.NotExpr")){
-            if(!isBooleanExpr(((NotExpr)e).e())) return false;
-            return true;
+            return isBooleanExpr(((NotExpr)e).e());
         }
-        return true;
+        //if we're here than the Expr doesn't fit a boolean type
+        return false;
     }
 
     /**
-     *
+     * given a MethodCallExpr this method returns the AstType that method returns
+     * if it's a reference type this method makes sure to have the correct id set
      * @param e
-     * @return
+     * @return AstType that method called returns, null if the call is illegal
      */
     private AstType methodCallerToReturnType(MethodCallExpr e){
         String ownerExprType = e.ownerExpr().getClass().getName();
+        //we'll get the invoker class name and than lookup the vtable to get the MethodDecl
         String callerClassName;
 
         if(ownerExprType.equals("ast.ThisExpr")){
@@ -251,14 +259,20 @@ public class SemanticChecksVisitor implements Visitor {
 
         else if(ownerExprType.equals("ast.IdentifierExpr")){
             IdentifierExpr ie = (IdentifierExpr)(e.ownerExpr());
+            //get declaration node of invoker
             AstNode decl = STLookup.getDeclNode(STLookup.findDeclTable(ie.id(),forest,e.enclosingScope(),programST), ie.id());
             VariableIntroduction varIntro = (VariableIntroduction)decl;
             //check to see that caller is RefType
             if(!varIntro.type().getClass().getName().equals("ast.RefType")) return null;
             callerClassName = ((RefType)varIntro.type()).id();
         }
-        //if the caller is none of the above than it's not a legal call
+        /* if the caller is none of the above than it's not a legal call
+         * check https://www.cs.tau.ac.il/research/yotam.feldman/courses/wcc20/project.html
+         * two bullets before last in the overview to be convinced of this*/
         else return null;
+
+        //check to see that owner is actually a class defined in the program
+        if(forest.nameToClassDecl(callerClassName) == null) return null;
 
         for(STSymbol symbol : vtables.get(callerClassName)){
             if(symbol.name().equals(e.methodId())){
@@ -276,7 +290,7 @@ public class SemanticChecksVisitor implements Visitor {
             formal.accept(this);
             if(!visitResult) return;
         }
-        definitelyInitialized = new HashSet<>();
+        definitelyInitialized = new HashSet<>(); //for req 14
         for(Statement statement : methodDecl.body()){
             statement.accept(this);
             if(!visitResult) return;
@@ -298,11 +312,16 @@ public class SemanticChecksVisitor implements Visitor {
         visit((VariableIntroduction)varDecl);
     }
 
+    /**
+     * This visit makes one check - that the variable class is actually a class in the program (req 7)
+     * @param varIntro
+     */
     private void visit(VariableIntroduction varIntro){
         AstType varType = varIntro.type();
         if(varType.getClass().getName().equals("ast.RefType")){
             if(forest.nameToClassDecl(((RefType)varType).id()) == null) visitResult = false;
         }
+        //else than the type is not a reference so it's a legal type
     }
 
     @Override
