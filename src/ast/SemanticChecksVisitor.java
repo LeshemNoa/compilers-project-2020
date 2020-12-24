@@ -106,11 +106,15 @@ public class SemanticChecksVisitor implements Visitor {
      */
     private boolean sameStaticType(VariableIntroduction a, VariableIntroduction b){
         //not the same ast type - return false
-        if(!a.type().getClass().getName().equals(b.type().getClass().getName())) return false;
+        String aTypeName = a.type().getClass().getName();
+        String bTypeName = b.type().getClass().getName();
+        if(!aTypeName.equals(bTypeName)) return false;
 
-        if(a.type().getClass().getName().equals("ast.RefType")){
+        if(aTypeName.equals("ast.RefType")){
             //both reference, check that to the same class
-            return ((RefType)a.type()).id().equals(((RefType)b.type()).id());
+            String aClassName = ((RefType)a.type()).id();
+            String bClassName = ((RefType)b.type()).id();
+            return aClassName.equals(bClassName);
         }
         //both the same type and not reference - int, boolean or int[]
         return true;
@@ -147,20 +151,20 @@ public class SemanticChecksVisitor implements Visitor {
      * @return AstType representing the type of e, null if the expression is not legal
      */
     private AstType getExprType(Expr e){
+        String dinamicExprName = e.getClass().getName();
+
+        //int array
+        if(dinamicExprName.equals("ast.NewIntArrayExpr")) return new IntArrayAstType();
+
         if(isIntExpr(e)) return new IntAstType();
 
         if(isBooleanExpr(e)) return new BoolAstType();
-
-        String dinamicExprName = e.getClass().getName();
 
         String binaryOps[] = {"ast.AddExpr", "ast.SubtractExpr", "ast.LtExpr", "ast.MultExpr","ast.AndExpr"};
         if(Arrays.asList(binaryOps).contains(dinamicExprName)){
             //binary must be either int or bool, so if we're here than it's not a legal expression
             return null;
         }
-
-        //int array
-        if(dinamicExprName.equals("ast.NewIntArrayExpr")) return new IntArrayAstType();
 
         //now we are left with: MethodCallExpr, IdentifierExpr, NewObjectExpr ot ThisExpr
         if(dinamicExprName.equals("ast.IdentifierExpr")){
