@@ -172,38 +172,38 @@ public class SemanticChecksVisitor implements Visitor {
      * @return AstType representing the type of e, null if the expression is not legal
      */
     private AstType getExprType(Expr e) {
-        String dinamicExprName = e.getClass().getName();
+        String dynamicExprName = e.getClass().getName();
 
         //int array
-        if (dinamicExprName.equals("ast.NewIntArrayExpr")) return new IntArrayAstType();
+        if (dynamicExprName.equals("ast.NewIntArrayExpr")) return new IntArrayAstType();
 
         if (isIntExpr(e)) return new IntAstType();
 
         if (isBooleanExpr(e)) return new BoolAstType();
 
-        String binaryOps[] = {"ast.AddExpr", "ast.SubtractExpr", "ast.LtExpr", "ast.MultExpr", "ast.AndExpr"};
-        if (Arrays.asList(binaryOps).contains(dinamicExprName)) {
+        String[] binaryOps = {"ast.AddExpr", "ast.SubtractExpr", "ast.LtExpr", "ast.MultExpr", "ast.AndExpr"};
+        if (Arrays.asList(binaryOps).contains(dynamicExprName)) {
             //binary must be either int or bool, so if we're here than it's not a legal expression
             return null;
         }
 
-        //now we are left with: MethodCallExpr, IdentifierExpr, NewObjectExpr ot ThisExpr
-        if (dinamicExprName.equals("ast.IdentifierExpr")) {
+        //now we are left with: MethodCallExpr, IdentifierExpr, NewObjectExpr or ThisExpr
+        if (dynamicExprName.equals("ast.IdentifierExpr")) {
             IdentifierExpr ie = (IdentifierExpr) e;
             //get node where variable was declared
             AstNode decl = STLookup.getDeclNode(STLookup.findDeclTable(ie.id(), forest, e.enclosingScope(), programST), ie.id());
             return ((VariableIntroduction) decl).type();
         }
-        if (dinamicExprName.equals("ast.MethodCallExpr")) {
+        if (dynamicExprName.equals("ast.MethodCallExpr")) {
             return methodCallerToReturnType((MethodCallExpr) e);
         }
         //in the next two cases, the result will be a RefType
         // but it doesn't exists in the program so we have to build it
         String id;
-        if (dinamicExprName.equals("ast.NewObjectExpr")) {
+        if (dynamicExprName.equals("ast.NewObjectExpr")) {
             id = ((NewObjectExpr) e).classId();
         } else { //the only possible expression left is ThisExpr
-            //we might want to check this explicitly because of possible unknowed bugs - Noa your input here
+            //we might want to check this explicitly because of possible unknown bugs - Noa your input here
             id = e.enclosingScope().getParent().scopeName();
         }
         return new RefType(id);
@@ -460,6 +460,41 @@ public class SemanticChecksVisitor implements Visitor {
 
     @Override
     public void visit(MethodCallExpr e) {
+        // req 11 - a method call is invoked on a ref type (this, new, or
+        // var / formal /  field that are ref types
+        AstType ownerType = getExprType(e.ownerExpr());
+        if (!(ownerType instanceof RefType)) {
+            visitResult = false;
+            return;
+        }
+
+        // req 10 method signature check
+        String className = ((RefType) ownerType).id();
+        SymbolTable classTable = programST.getSymbol(className, false).enclosedScope();
+        if (!classTable.contains(e.methodId(), true)) {
+            visitResult = false;
+            return;
+        }
+        MethodDecl methodDecl = (MethodDecl) classTable.getSymbol(e.methodId(), true).declaration();
+        if (methodDecl.formals().size() != e.actuals().size()) {
+            visitResult = false;
+            return;
+        }
+        for (int i = 0; i < methodDecl.formals().size(); i++) {
+            AstType formalType = methodDecl.formals().get(i).type();
+            AstType actualType = getExprType(e.actuals().get(i));
+
+            if (formalType.getClass() != actualType.getClass()) {
+                visitResult = false;
+                return;
+            } else if (formalType instanceof RefType && actualType instanceof RefType) {
+                if (!forest.isA(((RefType) actualType).id(), ((RefType) formalType).id())) {
+                    visitResult = false;
+                    return;
+                }
+            }
+        }
+
         e.ownerExpr().accept(this);
     }
 
