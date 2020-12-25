@@ -371,6 +371,12 @@ public class SemanticChecksVisitor implements Visitor {
 
     @Override
     public void visit(IfStatement ifStatement) {
+        // req 16 - cond is boolean
+        AstType condType = getExprType(ifStatement.cond());
+        if (!(condType instanceof BoolAstType)) {
+            visitResult = false;
+            return;
+        }
         Set<String> base = new HashSet<>(definitelyInitialized.peek());
 
         definitelyInitialized.push(new HashSet<>(base));
@@ -388,6 +394,12 @@ public class SemanticChecksVisitor implements Visitor {
 
     @Override
     public void visit(WhileStatement whileStatement) {
+        // req 16 - cond is boolean
+        AstType condType = getExprType(whileStatement.cond());
+        if (!(condType instanceof BoolAstType)) {
+            visitResult = false;
+            return;
+        }
         definitelyInitialized.push(new HashSet<>(definitelyInitialized.peek()));
         whileStatement.body().accept(this);
         // we don't know if the condition so we assume it didn't change anything in upper scope
@@ -401,7 +413,11 @@ public class SemanticChecksVisitor implements Visitor {
 
     @Override
     public void visit(AssignStatement assignStatement) {
-        // TODO: req 15, check types for lv and rv, make sure lv is declared etc.
+        SymbolTable declTable = STLookup.findDeclTable(assignStatement.lv(), forest, assignStatement.enclosingScope(), programST);
+        VariableIntroduction assigneeDecl = (VariableIntroduction) STLookup.getDeclNode(declTable, assignStatement.lv());
+        AstType assigneeType = assigneeDecl.type();
+        AstType assignedValueType = getExprType(assignStatement.rv());
+        // TODO continue: req 15
         assignStatement.rv().accept(this);
         definitelyInitialized.peek().add(assignStatement.lv());
     }
@@ -455,6 +471,11 @@ public class SemanticChecksVisitor implements Visitor {
 
     @Override
     public void visit(ArrayLengthExpr e) {
+        // req 12 - x.length where x is an int[]
+        if (!(getExprType(e.arrayExpr()) instanceof IntArrayAstType)) {
+            visitResult = false;
+            return;
+        }
         e.arrayExpr().accept(this);
     }
 
@@ -463,6 +484,7 @@ public class SemanticChecksVisitor implements Visitor {
         // req 11 - a method call is invoked on a ref type (this, new, or
         // var / formal /  field that are ref types
         AstType ownerType = getExprType(e.ownerExpr());
+        // req 9 - must be a reference type
         if (!(ownerType instanceof RefType)) {
             visitResult = false;
             return;
@@ -532,7 +554,11 @@ public class SemanticChecksVisitor implements Visitor {
 
     @Override
     public void visit(NewObjectExpr e) {
-
+        // req 8 - new A(); <=> A if defined
+        if (!programST.contains(e.classId(), false)) {
+            visitResult = false;
+            return;
+        }
     }
 
     @Override
