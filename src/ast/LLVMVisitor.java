@@ -586,7 +586,7 @@ public class LLVMVisitor implements Visitor{
             }
         }
         //find out return type
-        String invokerClass = findInvokingClassNameForMethodCall(e);
+        String invokerClass = STLookup.findInvokingClassNameForMethodCall(e, forest, programSymbolTable);
         MethodDecl methodDecl = (MethodDecl) vtables.get(invokerClass).get(methodIndex).declaration();
         String returnType = getLLVMType(methodDecl.returnType());
         //bitcast to function signature
@@ -617,7 +617,7 @@ public class LLVMVisitor implements Visitor{
     }
 
     private int getMethodIndexInVtable(MethodCallExpr e){
-        String classDeclName = findInvokingClassNameForMethodCall(e);
+        String classDeclName = STLookup.findInvokingClassNameForMethodCall(e, forest, programSymbolTable);
         List<STSymbol> vt = vtables.get(classDeclName);
         for(int i = 0; i < vt.size(); i++){
             if(vt.get(i).name().equals(e.methodId())) return i;
@@ -625,20 +625,6 @@ public class LLVMVisitor implements Visitor{
         //shouldn't reach this part ever
         System.out.println("something went wrong in getting method index");
         return -1;
-    }
-
-    private String findInvokingClassNameForMethodCall(MethodCallExpr e){
-        if(e.ownerExpr().getClass().getName().equals("ast.ThisExpr")) return e.enclosingScope().getParent().scopeName();
-        if(e.ownerExpr().getClass().getName().equals("ast.NewObjectExpr")){
-            NewObjectExpr owner = (NewObjectExpr)e.ownerExpr();
-            return owner.classId();
-        }
-        String ownerName = ((IdentifierExpr)e.ownerExpr()).id(); //only option left for owner is identifier
-        //find decelNode for owner
-        SymbolTable declTable = STLookup.findDeclTable(ownerName, forest, e.enclosingScope(), programSymbolTable);
-        VariableIntroduction decl = (VariableIntroduction) STLookup.getDeclNode(declTable, ownerName);
-        //declType must be RefType otherwise couldn't envoke a method call
-        return ((RefType)decl.type()).id();
     }
 
     @Override
