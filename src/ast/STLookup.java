@@ -31,6 +31,22 @@ public class STLookup {
         return scope.getSymbol(varName, false).declaration();
     }
 
+    public static String findInvokingClassNameForMethodCall(MethodCallExpr e, InheritanceForest forest, SymbolTable programST){
+        if (e.ownerExpr().getClass().getName().equals("ast.ThisExpr")){
+            return e.enclosingScope().getParent().scopeName();
+        }
+        if (e.ownerExpr().getClass().getName().equals("ast.NewObjectExpr")){
+            NewObjectExpr owner = (NewObjectExpr)e.ownerExpr();
+            return owner.classId();
+        }
+        String ownerName = ((IdentifierExpr)e.ownerExpr()).id(); //only option left for owner is identifier
+        //find declNode for owner
+        SymbolTable declTable = STLookup.findDeclTable(ownerName, forest, e.enclosingScope(), programST);
+        VariableIntroduction decl = (VariableIntroduction) STLookup.getDeclNode(declTable, ownerName);
+        //declType must be RefType otherwise couldn't invoke a method call
+        return ((RefType)decl.type()).id();
+    }
+
 
     /**
      * Creates two mappings:
