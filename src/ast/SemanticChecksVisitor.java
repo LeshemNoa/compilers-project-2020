@@ -59,6 +59,7 @@ public class SemanticChecksVisitor implements Visitor {
             }
 
             for (VarDecl varDecl : classDecl.fields()) {
+                //check for overriding fields - this would be illegal
                 if (parentFieldNames.contains(varDecl.name())) {
                     visitResult = false;
                     return;
@@ -83,6 +84,8 @@ public class SemanticChecksVisitor implements Visitor {
 
         // add fields to initialized set
         for (VarDecl varDecl : classDecl.fields()) {
+            varDecl.accept(this);
+            if(!visitResult) return;
             definitelyInitialized.peek().add(varDecl.name());
         }
 
