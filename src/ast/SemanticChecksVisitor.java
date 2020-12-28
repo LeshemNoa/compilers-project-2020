@@ -334,6 +334,8 @@ public class SemanticChecksVisitor implements Visitor {
             visitResult = false;
         }
 
+        methodDecl.ret().accept(this);
+
         // clear for next method
         definitelyInitialized.pop();
     }
