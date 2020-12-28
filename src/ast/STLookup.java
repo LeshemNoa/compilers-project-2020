@@ -21,7 +21,7 @@ public class STLookup {
     }
 
     public static SymbolTable classDeclToSymbolTable(ClassDecl cls, SymbolTable programST) {
-        if(cls == null) return null;
+        if(cls == null || programST == null) return null;
     	return programST.getSymbol(cls.name(), false).enclosedScope();
     }
 
@@ -29,6 +29,7 @@ public class STLookup {
      * Find the VariableIntro node declaring this variable name
      */
     public static AstNode getDeclNode(SymbolTable scope, String varName) {
+        if(scope == null || varName == null) return null;
         return scope.getSymbol(varName, false).declaration();
     }
 

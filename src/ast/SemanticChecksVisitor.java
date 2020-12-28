@@ -192,7 +192,7 @@ public class SemanticChecksVisitor implements Visitor {
             IdentifierExpr ie = (IdentifierExpr) e;
             //get node where variable was declared
             AstNode decl = STLookup.getDeclNode(STLookup.findDeclTable(ie.id(), forest, e.enclosingScope(), programST), ie.id());
-            return ((VariableIntroduction) decl).type();
+            return decl != null ? ((VariableIntroduction) decl).type() : null;
         }
         if (dynamicExprName.equals("ast.MethodCallExpr")) {
             return methodCallerToReturnType((MethodCallExpr) e);
@@ -417,15 +417,28 @@ public class SemanticChecksVisitor implements Visitor {
         sysoutStatement.arg().accept(this);
     }
 
-    @Override
-    public void visit(AssignStatement assignStatement) {
-        SymbolTable declTable = STLookup.findDeclTable(assignStatement.lv(), forest, assignStatement.enclosingScope(), programST);
+    /**
+     * this method is written as to not duplecate code for both AssignStatement and AssignArrayStatement
+     * @param assigneeName
+     * @param enclosingScope
+     * @return VariableIntroduction node where assigneeName was defined or null if it wasn't
+     */
+    private VariableIntroduction assigneeDeclNode(String assigneeName, SymbolTable enclosingScope){
+        SymbolTable declTable = STLookup.findDeclTable(assigneeName, forest, enclosingScope, programST);
         //req 16 - assignedValueType is defined
         if(declTable == null){
             visitResult = false;
-            return;
+            return null;
         }
-        VariableIntroduction assigneeDecl = (VariableIntroduction) STLookup.getDeclNode(declTable, assignStatement.lv());
+        return (VariableIntroduction) STLookup.getDeclNode(declTable, assigneeName);
+    }
+
+    @Override
+    public void visit(AssignStatement assignStatement) {
+        VariableIntroduction assigneeDecl = assigneeDeclNode(assignStatement.lv(), assignStatement.enclosingScope());
+        //req 16 - assignedValueType is defined
+        if(assigneeDecl == null) return;
+
         AstType assigneeType = assigneeDecl.type();
         AstType assignedValueType = getExprType(assignStatement.rv());
         // req 15 - assignedValueType is a subtype of the static assignee type
@@ -439,9 +452,11 @@ public class SemanticChecksVisitor implements Visitor {
 
     @Override
     public void visit(AssignArrayStatement assignArrayStatement) {
+        VariableIntroduction arrayDecl = assigneeDeclNode(assignArrayStatement.lv(), assignArrayStatement.enclosingScope());
+        //req 16 - assignedValueType is defined
+        if(arrayDecl == null) return;
+
         // req 21 type checking
-        SymbolTable declTable = STLookup.findDeclTable(assignArrayStatement.lv(), forest, assignArrayStatement.enclosingScope(), programST);
-        VariableIntroduction arrayDecl = (VariableIntroduction) STLookup.getDeclNode(declTable, assignArrayStatement.lv());
         if (!(arrayDecl.type() instanceof IntArrayAstType) ||
             !(getExprType(assignArrayStatement.index()) instanceof IntAstType) ||
                 !(getExprType(assignArrayStatement.rv()) instanceof IntAstType)){
