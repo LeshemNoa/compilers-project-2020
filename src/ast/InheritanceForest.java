@@ -72,7 +72,7 @@ public class InheritanceForest {
 			allClassDeclNames.add(cls.name());
 			if(cls.superName() == null) {
 				// semantic check - no name repetition (req 3)
-				if(nodeMap.containsKey(cls.name())){
+				if(nodeMap.containsKey(cls.name()) || cls.name().equals(mainClass.name())){
 					isLegalForest = false;
 					return;
 				}
@@ -124,7 +124,8 @@ public class InheritanceForest {
 		//5. super is defined before self (req 1)
 		//
 		if(!allNames.contains(superName) || superName.equals(cls.name()) || superName.equals(mainClass.name()) ||
-				nodeMap.containsKey(cls.name()) || nodeMap.get(superName).value.lineNumber >= cls.lineNumber){
+				nodeMap.containsKey(cls.name()) || cls.name().equals(mainClass.name()) ||
+				nodeMap.get(superName).value.lineNumber >= cls.lineNumber){
 			isLegalForest = false;
 		}
 		return isLegalForest;
