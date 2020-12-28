@@ -21,7 +21,7 @@ public class SemanticChecksVisitor implements Visitor {
     }
 
     public boolean isLegalProgram() {
-        return visitResult;
+        return visitResult && isLegalForest && isLegalST;
     }
 
     @Override
