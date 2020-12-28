@@ -36,6 +36,8 @@ public class SemanticChecksVisitor implements Visitor {
         vtables = maps.get(0);
         instanceTemplates = maps.get(1);
 
+        program.mainClass().accept(this);
+
         for (ClassDecl classDecl : program.classDecls()) {
             classDecl.accept(this);
         }
@@ -160,7 +162,6 @@ public class SemanticChecksVisitor implements Visitor {
 
     @Override
     public void visit(MainClass mainClass) {
-        //TODO
         mainClass.mainStatement().accept(this);
     }
 
