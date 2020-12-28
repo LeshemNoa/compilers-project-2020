@@ -284,6 +284,7 @@ public class SemanticChecksVisitor implements Visitor {
             IdentifierExpr ie = (IdentifierExpr) (e.ownerExpr());
             //get declaration node of invoker
             AstNode decl = STLookup.getDeclNode(STLookup.findDeclTable(ie.id(), forest, e.enclosingScope(), programST), ie.id());
+            if(decl == null) return null;
             VariableIntroduction varIntro = (VariableIntroduction) decl;
             //check to see that caller is RefType
             if (!varIntro.type().getClass().getName().equals("ast.RefType")) return null;
