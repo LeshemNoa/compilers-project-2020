@@ -317,6 +317,7 @@ public class SemanticChecksVisitor implements Visitor {
         for (VarDecl var : methodDecl.vardecls()) {
             // remove hidden fields from set for current scope
             definitelyInitialized.peek().remove(var.name());
+            var.accept(this);
         }
 
         for (FormalArg formal : methodDecl.formals()) {

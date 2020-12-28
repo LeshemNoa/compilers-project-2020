@@ -199,7 +199,7 @@ public class InheritanceForest {
 	}
 	
 	public ClassDecl nameToClassDecl(String name) {
-		if(name == null) return null;
+		if(name == null || !nodeMap.containsKey(name)) return null;
 		return nodeMap.get(name).value;
 	}
 
