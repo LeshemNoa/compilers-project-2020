@@ -33,7 +33,12 @@ public class Main {
                     outFile.write(astPrinter.getString());
 
                 } else if (action.equals("semantic")) {
-                    throw new UnsupportedOperationException("TODO - Ex. 3");
+                    SemanticChecksVisitor v = new SemanticChecksVisitor();
+                    prog.accept(v);
+                    PrintWriter out = new PrintWriter(outfilename);
+                    String output = v.isLegalProgram() ? "OK" : "ERROR";
+                    out.print(output);
+                    out.close();
 
                 } else if (action.equals("compile")) {
                     LLVMVisitor v = new LLVMVisitor(prog);
