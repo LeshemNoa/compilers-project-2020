@@ -420,6 +420,11 @@ public class SemanticChecksVisitor implements Visitor {
     @Override
     public void visit(AssignStatement assignStatement) {
         SymbolTable declTable = STLookup.findDeclTable(assignStatement.lv(), forest, assignStatement.enclosingScope(), programST);
+        //req 16 - assignedValueType is defined
+        if(declTable == null){
+            visitResult = false;
+            return;
+        }
         VariableIntroduction assigneeDecl = (VariableIntroduction) STLookup.getDeclNode(declTable, assignStatement.lv());
         AstType assigneeType = assigneeDecl.type();
         AstType assignedValueType = getExprType(assignStatement.rv());

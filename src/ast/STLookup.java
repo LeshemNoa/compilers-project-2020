@@ -21,6 +21,7 @@ public class STLookup {
     }
 
     public static SymbolTable classDeclToSymbolTable(ClassDecl cls, SymbolTable programST) {
+        if(cls == null) return null;
     	return programST.getSymbol(cls.name(), false).enclosedScope();
     }
 
