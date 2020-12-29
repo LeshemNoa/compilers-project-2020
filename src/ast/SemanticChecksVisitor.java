@@ -11,17 +11,20 @@ public class SemanticChecksVisitor implements Visitor {
     private boolean isLegalForest;
     private boolean isLegalST;
     private boolean visitResult; //should be set to true at builder but any subsequent sets are to false
+    private void setVisitResult(boolean visitResult) {
+        this.visitResult = visitResult;
+    }
     private Stack<Set<String>> definitelyInitialized;
 
     public SemanticChecksVisitor() {
         isLegalForest = true;
         isLegalST = true;
-        visitResult = true;
+        setVisitResult(true);
         definitelyInitialized = new Stack<>();
     }
 
     public boolean isLegalProgram() {
-        return visitResult && isLegalForest && isLegalST;
+        return isVisitResult() && isLegalForest && isLegalST;
     }
 
     @Override
@@ -37,7 +40,7 @@ public class SemanticChecksVisitor implements Visitor {
         instanceTemplates = maps.get(1);
 
         program.mainClass().accept(this);
-        if(!visitResult) return;
+        if(!isVisitResult()) return;
 
         for (ClassDecl classDecl : program.classDecls()) {
             classDecl.accept(this);
@@ -62,7 +65,7 @@ public class SemanticChecksVisitor implements Visitor {
             for (VarDecl varDecl : classDecl.fields()) {
                 //check for overriding fields - this would be illegal
                 if (parentFieldNames.contains(varDecl.name())) {
-                    visitResult = false;
+                    setVisitResult(false);
                     return;
                 }
             }
@@ -76,7 +79,7 @@ public class SemanticChecksVisitor implements Visitor {
                 if (parentMethodDecls.containsKey(methodDecl.name())) {
                     MethodDecl overwritten = parentMethodDecls.get(methodDecl.name());
                     if (!legalMethodOverride(methodDecl, overwritten)) {
-                        visitResult = false;
+                        setVisitResult(false);
                         return;
                     }
                 }
@@ -86,13 +89,13 @@ public class SemanticChecksVisitor implements Visitor {
         // add fields to initialized set
         for (VarDecl varDecl : classDecl.fields()) {
             varDecl.accept(this);
-            if(!visitResult) return;
+            if(!isVisitResult()) return;
             definitelyInitialized.peek().add(varDecl.name());
         }
 
         for (MethodDecl methodDecl : classDecl.methoddecls()) {
             methodDecl.accept(this);
-            if (!visitResult) return;
+            if (!isVisitResult()) return;
         }
 
         definitelyInitialized.pop();
@@ -166,7 +169,9 @@ public class SemanticChecksVisitor implements Visitor {
 
     @Override
     public void visit(MainClass mainClass) {
+        definitelyInitialized.push(new HashSet<>()); //for req 14
         mainClass.mainStatement().accept(this);
+        definitelyInitialized.pop();
     }
 
     /**
@@ -223,20 +228,20 @@ public class SemanticChecksVisitor implements Visitor {
      * @return
      */
     private boolean isIntExpr(Expr e) {
-        String dinamicExprName = e.getClass().getName();
-        if(dinamicExprName.equals("ast.IdentifierExpr")){
+        String dynamicExprName = e.getClass().getName();
+        if(dynamicExprName.equals("ast.IdentifierExpr")){
             return identifierExprToType((IdentifierExpr) e) instanceof IntAstType;
         }
-        String exprNames[];
+        String[] exprNames;
 
         exprNames = new String[]{"ast.IntegerLiteralExpr", "ast.ArrayLengthExpr", "ast.ArrayAccessExpr"};
-        if (Arrays.asList(exprNames).contains(dinamicExprName)) {
+        if (Arrays.asList(exprNames).contains(dynamicExprName)) {
             //for ArrayLengthExpr and ArrayAccessExpr other places in the visitor should check legality
             return true;
         }
 
-        exprNames = new String[]{"ast.AddExpr", "ast.SubtractExpr", "ast.LtExpr", "ast.MultExpr"};
-        if (Arrays.asList(exprNames).contains(dinamicExprName)) {
+        exprNames = new String[]{"ast.AddExpr", "ast.SubtractExpr", "ast.MultExpr"};
+        if (Arrays.asList(exprNames).contains(dynamicExprName)) {
             BinaryExpr be = (BinaryExpr) e;
             //both need to be int
             return isIntExpr(be.e1()) && isIntExpr(be.e2());
@@ -253,23 +258,33 @@ public class SemanticChecksVisitor implements Visitor {
      * @return
      */
     private boolean isBooleanExpr(Expr e) {
-        String dinamicExprName = e.getClass().getName();
-        if(dinamicExprName.equals("ast.IdentifierExpr")){
+        String dynamicExprName = e.getClass().getName();
+        if(dynamicExprName.equals("ast.IdentifierExpr")){
             return identifierExprToType((IdentifierExpr) e) instanceof BoolAstType;
         }
 
-        if (dinamicExprName.equals("ast.TrueExpr") || dinamicExprName.equals("ast.FalseExpr")) {
+        if (dynamicExprName.equals("ast.TrueExpr") || dynamicExprName.equals("ast.FalseExpr")) {
             return true;
         }
 
-        if (dinamicExprName.equals("ast.AndExpr")) {
+        if (dynamicExprName.equals("ast.AndExpr")) {
             AndExpr ae = (AndExpr) e;
             //both need to be boolean
             return isBooleanExpr(ae.e1()) && isBooleanExpr(ae.e2());
         }
 
-        if (dinamicExprName.equals("ast.NotExpr")) {
+        if (dynamicExprName.equals("ast.NotExpr")) {
             return isBooleanExpr(((NotExpr) e).e());
+        }
+
+        if (dynamicExprName.equals("ast.LtExpr")) {
+            //both need to be int
+            BinaryExpr be = (BinaryExpr) e;
+            return isIntExpr(be.e1()) && isIntExpr(be.e2());
+        }
+        if (dynamicExprName.equals("ast.MethodCallExpr")) {
+            // need to check return type
+
         }
         //if we're here than the Expr doesn't fit a boolean type
         return false;
@@ -342,18 +357,18 @@ public class SemanticChecksVisitor implements Visitor {
 
         for (FormalArg formal : methodDecl.formals()) {
             formal.accept(this);
-            if (!visitResult) return;
+            if (!isVisitResult()) return;
         }
 
         for (Statement statement : methodDecl.body()) {
             statement.accept(this);
-            if (!visitResult) return;
+            if (!isVisitResult()) return;
         }
 
         //check that retType fits the return statement (req 17)
         AstType returnStatementType = getExprType(methodDecl.ret());
         if (returnStatementType == null || !isCovariant(returnStatementType, methodDecl.returnType())) {
-            visitResult = false;
+            setVisitResult(false);
         }
 
         methodDecl.ret().accept(this);
@@ -381,7 +396,7 @@ public class SemanticChecksVisitor implements Visitor {
     private void visit(VariableIntroduction varIntro) {
         AstType varType = varIntro.type();
         if (varType.getClass().getName().equals("ast.RefType")) {
-            if (forest.nameToClassDecl(((RefType) varType).id()) == null) visitResult = false;
+            if (forest.nameToClassDecl(((RefType) varType).id()) == null) setVisitResult(false);
         }
         //else than the type is not a reference so it's a legal type
     }
@@ -390,16 +405,21 @@ public class SemanticChecksVisitor implements Visitor {
     public void visit(BlockStatement blockStatement) {
         for (Statement statement : blockStatement.statements()) {
             statement.accept(this);
-            if (!visitResult) return;
+            if (!isVisitResult()) return;
         }
     }
 
     @Override
     public void visit(IfStatement ifStatement) {
+        Expr cond = ifStatement.cond();
+        cond.accept(this);
+        if (!isVisitResult()) {
+            return;
+        }
         // req 16 - cond is boolean
-        AstType condType = getExprType(ifStatement.cond());
+        AstType condType = getExprType(cond);
         if (!(condType instanceof BoolAstType)) {
-            visitResult = false;
+            setVisitResult(false);
             return;
         }
         Set<String> base = new HashSet<>(definitelyInitialized.peek());
@@ -419,10 +439,15 @@ public class SemanticChecksVisitor implements Visitor {
 
     @Override
     public void visit(WhileStatement whileStatement) {
+        Expr cond = whileStatement.cond();
+        cond.accept(this);
+        if (!isVisitResult()) {
+            return;
+        }
         // req 16 - cond is boolean
-        AstType condType = getExprType(whileStatement.cond());
+        AstType condType = getExprType(cond);
         if (!(condType instanceof BoolAstType)) {
-            visitResult = false;
+            setVisitResult(false);
             return;
         }
         definitelyInitialized.push(new HashSet<>(definitelyInitialized.peek()));
@@ -433,11 +458,12 @@ public class SemanticChecksVisitor implements Visitor {
 
     @Override
     public void visit(SysoutStatement sysoutStatement) {
-        sysoutStatement.arg().accept(this);
-        if(!visitResult) return;
+        Expr arg = sysoutStatement.arg();
+        arg.accept(this);
+        if (!isVisitResult()) return;
         AstType argExprType = getExprType(sysoutStatement.arg());
         // req 18 - arg of sysout stmt must be an int
-        if (!(argExprType instanceof IntAstType)) visitResult = false;
+        if (!(argExprType instanceof IntAstType)) setVisitResult(false);
     }
 
     /**
@@ -450,7 +476,7 @@ public class SemanticChecksVisitor implements Visitor {
         SymbolTable declTable = STLookup.findDeclTable(assigneeName, forest, enclosingScope, programST);
         //req 16 - assignedValueType is defined
         if(declTable == null){
-            visitResult = false;
+            setVisitResult(false);
             return null;
         }
         return (VariableIntroduction) STLookup.getDeclNode(declTable, assigneeName);
@@ -464,9 +490,13 @@ public class SemanticChecksVisitor implements Visitor {
 
         AstType assigneeType = assigneeDecl.type();
         AstType assignedValueType = getExprType(assignStatement.rv());
+        if (assignedValueType == null) {
+            setVisitResult(false);
+            return;
+        }
         // req 15 - assignedValueType is a subtype of the static assignee type
         if (!isCovariant(assignedValueType, assigneeType)) {
-            visitResult = false;
+            setVisitResult(false);
             return;
         }
         assignStatement.rv().accept(this);
@@ -483,12 +513,12 @@ public class SemanticChecksVisitor implements Visitor {
         if (!(arrayDecl.type() instanceof IntArrayAstType) ||
             !(getExprType(assignArrayStatement.index()) instanceof IntAstType) ||
                 !(getExprType(assignArrayStatement.rv()) instanceof IntAstType)){
-            visitResult = false;
+            setVisitResult(false);
             return;
         }
 
         if (!definitelyInitialized.peek().contains(assignArrayStatement.lv())) {
-            visitResult = false;
+            setVisitResult(false);
             return;
         }
 
@@ -504,9 +534,11 @@ public class SemanticChecksVisitor implements Visitor {
     @Override
     public void visit(AndExpr e) {
         // req 19 - binary expressions type checking
-        if (!(getExprType(e.e1()) instanceof BoolAstType) ||
-                !(getExprType(e.e2()) instanceof BoolAstType)) {
-            visitResult = false;
+        AstType e1Type = getExprType(e.e1());
+        AstType e2Type = getExprType(e.e2());
+        if (!(e1Type instanceof BoolAstType) ||
+                !(e2Type instanceof BoolAstType)) {
+            setVisitResult(false);
             return;
         }
         visit((BinaryExpr)e);
@@ -515,9 +547,11 @@ public class SemanticChecksVisitor implements Visitor {
     @Override
     public void visit(LtExpr e) {
         // req 19 - binary expressions type checking
-        if (!(getExprType(e.e1()) instanceof IntAstType) ||
-                !(getExprType(e.e2()) instanceof IntAstType)) {
-            visitResult = false;
+        AstType e1Type = getExprType(e.e1());
+        AstType e2Type = getExprType(e.e2());
+        if (!(e1Type instanceof IntAstType) ||
+                !(e2Type instanceof IntAstType)) {
+            setVisitResult(false);
             return;
         }
         visit((BinaryExpr)e);
@@ -528,7 +562,7 @@ public class SemanticChecksVisitor implements Visitor {
         // req 19 - binary expressions type checking
         if (!(getExprType(e.e1()) instanceof IntAstType) ||
                 !(getExprType(e.e2()) instanceof IntAstType)) {
-            visitResult = false;
+            setVisitResult(false);
             return;
         }
         visit((BinaryExpr)e);
@@ -539,7 +573,7 @@ public class SemanticChecksVisitor implements Visitor {
         // req 19 - binary expressions type checking
         if (!(getExprType(e.e1()) instanceof IntAstType) ||
                 !(getExprType(e.e2()) instanceof IntAstType)) {
-            visitResult = false;
+            setVisitResult(false);
             return;
         }
         visit((BinaryExpr)e);
@@ -550,7 +584,7 @@ public class SemanticChecksVisitor implements Visitor {
         // req 19 - binary expressions type checking
         if (!(getExprType(e.e1()) instanceof IntAstType) ||
                 !(getExprType(e.e2()) instanceof IntAstType)) {
-            visitResult = false;
+            setVisitResult(false);
             return;
         }
         visit((BinaryExpr)e);
@@ -561,7 +595,7 @@ public class SemanticChecksVisitor implements Visitor {
         // req 20 - make sure index is an int and that the array is int[]
         if (!(getExprType(e.arrayExpr()) instanceof IntArrayAstType) ||
                 !(getExprType(e.indexExpr()) instanceof IntAstType)) {
-            visitResult = false;
+            setVisitResult(false);
             return;
         }
         e.arrayExpr().accept(this);
@@ -572,7 +606,7 @@ public class SemanticChecksVisitor implements Visitor {
     public void visit(ArrayLengthExpr e) {
         // req 12 - x.length where x is an int[]
         if (!(getExprType(e.arrayExpr()) instanceof IntArrayAstType)) {
-            visitResult = false;
+            setVisitResult(false);
             return;
         }
         e.arrayExpr().accept(this);
@@ -585,14 +619,22 @@ public class SemanticChecksVisitor implements Visitor {
         AstType ownerType = getExprType(e.ownerExpr());
         // req 9 - must be a reference type
         if (!(ownerType instanceof RefType)) {
-            visitResult = false;
+            setVisitResult(false);
+            return;
+        }
+        e.ownerExpr().accept(this);
+        if (!isVisitResult()) {
             return;
         }
 
         // req 10 method signature check
         String invokingClass = STLookup.findInvokingClassNameForMethodCall(e, forest, programST);
-
         List<STSymbol> invokingClassVT = vtables.get(invokingClass);
+        // invoking class is undeclared
+        if (invokingClassVT == null) {
+            setVisitResult(false);
+            return;
+        }
         int methodIndexInVT = -1;
         for (int i = 0; i < invokingClassVT.size(); i++){
             if (invokingClassVT.get(i).name().equals(e.methodId())) {
@@ -602,25 +644,30 @@ public class SemanticChecksVisitor implements Visitor {
         }
         // method not in VT
         if (methodIndexInVT == -1) {
-            visitResult = false;
+            setVisitResult(false);
             return;
         }
 
         MethodDecl methodDecl = (MethodDecl) vtables.get(invokingClass).get(methodIndexInVT).declaration();
 
         if (methodDecl.formals().size() != e.actuals().size()) {
-            visitResult = false;
+            setVisitResult(false);
             return;
         }
         for (int i = 0; i < methodDecl.formals().size(); i++) {
             AstType formalType = methodDecl.formals().get(i).type();
-            AstType actualType = getExprType(e.actuals().get(i));
+            Expr currActual = e.actuals().get(i);
+            currActual.accept(this);
+            if (!isVisitResult()) {
+                return;
+            }
+            AstType actualType = getExprType(currActual);
 
             if (actualType == null || formalType.getClass() != actualType.getClass()) {
-                visitResult = false;
+                setVisitResult(false);
                 return;
             } else if (!isCovariant(actualType, formalType)) {
-                    visitResult = false;
+                    setVisitResult(false);
                     return;
             }
         }
@@ -646,21 +693,22 @@ public class SemanticChecksVisitor implements Visitor {
     @Override
     public void visit(IdentifierExpr e) {
         // req 13 - make sure this identifier is a local variable, a formal parameter, or a field
-        String enclosingClassName = e.enclosingScope().getParent().scopeName();
-        List<STSymbol> classInstanceShape = instanceTemplates.get(enclosingClassName);
-        boolean isField = false;
-        for (STSymbol field : classInstanceShape) {
-            if (field.name().equals(e.id())) {
-                isField = true;
-            }
-        }
-        if (!isField && !e.enclosingScope().contains(e.id(), false)) {
-            visitResult = false;
+        SymbolTable enclosingST = STLookup.findDeclTable(e.id(), forest, e.enclosingScope(), programST);
+        // var is not declared
+        if (enclosingST == null) {
+            setVisitResult(false);
             return;
         }
-
-        if (!definitelyInitialized.peek().contains(e.id())) {
-            visitResult = false;
+        if (enclosingST.contains(e.id(), false)) {
+            if (!definitelyInitialized.peek().contains(e.id())) {
+                setVisitResult(false);
+            }
+            return;
+        }
+        String enclosingClassName = e.enclosingScope().getParent().scopeName();
+        List<STSymbol> classInstanceShape = instanceTemplates.get(enclosingClassName);
+        if (classInstanceShape == null || !STLookup.classInstanceHasField(classInstanceShape, e.id())) {
+            setVisitResult(false);
         }
     }
 
@@ -673,7 +721,7 @@ public class SemanticChecksVisitor implements Visitor {
     public void visit(NewIntArrayExpr e) {
         // req 23 -  check length is an int
         if (!(getExprType(e.lengthExpr()) instanceof IntAstType)){
-            visitResult = false;
+            setVisitResult(false);
             return;
         }
         e.lengthExpr().accept(this);
@@ -683,7 +731,7 @@ public class SemanticChecksVisitor implements Visitor {
     public void visit(NewObjectExpr e) {
         // req 8 - new A(); <=> A if defined
         if (!programST.contains(e.classId(), false)) {
-            visitResult = false;
+            setVisitResult(false);
             return;
         }
     }
@@ -692,7 +740,7 @@ public class SemanticChecksVisitor implements Visitor {
     public void visit(NotExpr e) {
         // req 19 - not expression type checking
         if (!(getExprType(e.e()) instanceof BoolAstType)){
-            visitResult = false;
+            setVisitResult(false);
             return;
         }
         e.e().accept(this);
@@ -717,4 +765,9 @@ public class SemanticChecksVisitor implements Visitor {
     public void visit(RefType t) {
 
     }
+
+    public boolean isVisitResult() {
+        return visitResult;
+    }
+
 }
