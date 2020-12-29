@@ -229,9 +229,6 @@ public class SemanticChecksVisitor implements Visitor {
      */
     private boolean isIntExpr(Expr e) {
         String dynamicExprName = e.getClass().getName();
-        if(dynamicExprName.equals("ast.IdentifierExpr")){
-            return identifierExprToType((IdentifierExpr) e) instanceof IntAstType;
-        }
         String[] exprNames;
 
         exprNames = new String[]{"ast.IntegerLiteralExpr", "ast.ArrayLengthExpr", "ast.ArrayAccessExpr"};
@@ -244,7 +241,10 @@ public class SemanticChecksVisitor implements Visitor {
         if (Arrays.asList(exprNames).contains(dynamicExprName)) {
             BinaryExpr be = (BinaryExpr) e;
             //both need to be int
-            return isIntExpr(be.e1()) && isIntExpr(be.e2());
+            //we call the original getExprType because it could be identifier or method call
+            boolean isE1Int = getExprType(be.e1()) instanceof IntAstType;
+            boolean isE2Int = getExprType(be.e2()) instanceof IntAstType;
+            return isE1Int && isE2Int;
         }
         //if we're here than the Expr doesn't fit an int type
         return false;
@@ -259,33 +259,31 @@ public class SemanticChecksVisitor implements Visitor {
      */
     private boolean isBooleanExpr(Expr e) {
         String dynamicExprName = e.getClass().getName();
-        if(dynamicExprName.equals("ast.IdentifierExpr")){
-            return identifierExprToType((IdentifierExpr) e) instanceof BoolAstType;
-        }
 
         if (dynamicExprName.equals("ast.TrueExpr") || dynamicExprName.equals("ast.FalseExpr")) {
             return true;
         }
 
+        if (dynamicExprName.equals("ast.NotExpr")) {
+            return getExprType(((NotExpr) e).e()) instanceof BoolAstType;
+        }
+
         if (dynamicExprName.equals("ast.AndExpr")) {
             AndExpr ae = (AndExpr) e;
             //both need to be boolean
-            return isBooleanExpr(ae.e1()) && isBooleanExpr(ae.e2());
-        }
-
-        if (dynamicExprName.equals("ast.NotExpr")) {
-            return isBooleanExpr(((NotExpr) e).e());
+            boolean isE1Bool = getExprType(ae.e1()) instanceof BoolAstType;
+            boolean isE2Bool = getExprType(ae.e2()) instanceof BoolAstType;
+            return isE1Bool && isE2Bool;
         }
 
         if (dynamicExprName.equals("ast.LtExpr")) {
             //both need to be int
             BinaryExpr be = (BinaryExpr) e;
-            return isIntExpr(be.e1()) && isIntExpr(be.e2());
+            boolean isE1Int = getExprType(be.e1()) instanceof IntAstType;
+            boolean isE2Int = getExprType(be.e2()) instanceof IntAstType;
+            return isE1Int && isE2Int;
         }
-        if (dynamicExprName.equals("ast.MethodCallExpr")) {
-            // need to check return type
 
-        }
         //if we're here than the Expr doesn't fit a boolean type
         return false;
     }
