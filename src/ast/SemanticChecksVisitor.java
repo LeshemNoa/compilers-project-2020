@@ -283,7 +283,7 @@ public class SemanticChecksVisitor implements Visitor {
             return isIntExpr(be.e1()) && isIntExpr(be.e2());
         }
         if (dynamicExprName.equals("ast.MethodCallExpr")) {
-            // need to check return type
+            return methodCallerToReturnType((MethodCallExpr)e) instanceof BoolAstType;
 
         }
         //if we're here than the Expr doesn't fit a boolean type
