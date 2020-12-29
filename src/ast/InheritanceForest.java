@@ -65,14 +65,15 @@ public class InheritanceForest {
 		LLclasses classBag = new LLclasses();
 
 		//for semantic checks
-		Set<String> allClassDeclNames = new HashSet<>();
+		Map<String, Integer> classDeclNamesAndOrder = new HashMap<>();
 		
 		/*add all roots to the ArrayList trees*/
-		for(ClassDecl cls : prog.classDecls()) {
-			allClassDeclNames.add(cls.name());
+		for(int i = 0; i < prog.classDecls().size(); i++) {
+			ClassDecl cls = prog.classDecls().get(i);
+			classDeclNamesAndOrder.put(cls.name(), i);
 			if(cls.superName() == null) {
 				// semantic check - no name repetition (req 3)
-				if(nodeMap.containsKey(cls.name())){
+				if(nodeMap.containsKey(cls.name()) || cls.name().equals(mainClass.name())){
 					isLegalForest = false;
 					return;
 				}
@@ -93,7 +94,7 @@ public class InheritanceForest {
 		while(classBag.head != null) {
 			superName = classBag.head.value.superName();
 			//semantic checks
-			if(!legalClassDecl(classBag.head.value, superName, allClassDeclNames)) return;
+			if(!legalClassDecl(classBag.head.value, superName, classDeclNamesAndOrder)) return;
 
 			if(nodeMap.containsKey(superName)){
 				addToForest(classBag.head.value);
@@ -104,7 +105,7 @@ public class InheritanceForest {
 			while(curr.next != null) {
 				superName = curr.next.value.superName();
 				//semantic checks
-				if(!legalClassDecl(curr.next.value, superName, allClassDeclNames)) return;
+				if(!legalClassDecl(curr.next.value, superName, classDeclNamesAndOrder)) return;
 
 				if(nodeMap.containsKey(superName)) {
 					addToForest(curr.next.value);
@@ -115,16 +116,17 @@ public class InheritanceForest {
 		}
 	}
 	
-	private boolean legalClassDecl(ClassDecl cls, String superName, Set<String> allNames){
+	private boolean legalClassDecl(ClassDecl cls, String superName, Map<String, Integer> namesAndOrder){
 		// checks:
 		//1. super is defined
 		//2. super is not self
 		//3. super is not main (req 2)
 		//4. class name is not a repetition
 		//5. super is defined before self (req 1)
-		// TODO: check for cycles in forest (req 1)
-		if(!allNames.contains(superName) || superName.equals(cls.name()) || superName.equals(mainClass.name()) ||
-				nodeMap.containsKey(cls.name()) || nodeMap.get(superName).value.lineNumber >= cls.lineNumber){
+		//
+		if(!namesAndOrder.containsKey(superName) || superName.equals(cls.name()) || superName.equals(mainClass.name()) ||
+				nodeMap.containsKey(cls.name()) || cls.name().equals(mainClass.name()) ||
+				namesAndOrder.get(superName) >= namesAndOrder.get(cls.name())){
 			isLegalForest = false;
 		}
 		return isLegalForest;
@@ -198,7 +200,7 @@ public class InheritanceForest {
 	}
 	
 	public ClassDecl nameToClassDecl(String name) {
-		if(name == null) return null;
+		if(name == null || !nodeMap.containsKey(name)) return null;
 		return nodeMap.get(name).value;
 	}
 

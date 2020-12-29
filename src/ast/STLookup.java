@@ -8,6 +8,7 @@ public class STLookup {
      * or it could be a field in an ancestor class.
      */
     public static SymbolTable findDeclTable(String variable, InheritanceForest forest, SymbolTable enclosingScope, SymbolTable programST) {
+        if(variable == null || forest == null || enclosingScope == null || programST == null) return null;
         if (enclosingScope.contains(variable, false)) return enclosingScope;
         // the next line is based on the fact that the SymbolTable of a class has no parent
         SymbolTable res = enclosingScope.getParent(); // never null - it's a class ST
@@ -21,6 +22,7 @@ public class STLookup {
     }
 
     public static SymbolTable classDeclToSymbolTable(ClassDecl cls, SymbolTable programST) {
+        if(cls == null || programST == null) return null;
     	return programST.getSymbol(cls.name(), false).enclosedScope();
     }
 
@@ -28,6 +30,7 @@ public class STLookup {
      * Find the VariableIntro node declaring this variable name
      */
     public static AstNode getDeclNode(SymbolTable scope, String varName) {
+        if(scope == null || varName == null) return null;
         return scope.getSymbol(varName, false).declaration();
     }
 
