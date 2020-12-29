@@ -50,6 +50,22 @@ public class STLookup {
         return ((RefType)decl.type()).id();
     }
 
+    /**
+     * Check whether provided list of STSymbols representing fields in a class instance, contains
+     * a field with provided name.
+     * @param instanceShape     List of STSymbols representing the LL structure of a class instance
+     * @param fieldName         Field name we search for
+     * @return                  true if class instance has this field, else false
+     */
+    public static boolean classInstanceHasField(List<STSymbol> instanceShape, String fieldName) {
+        for (STSymbol field : instanceShape) {
+            if (field.name().equals(fieldName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     /**
      * Creates two mappings:

@@ -107,23 +107,6 @@ public class LLVMVisitor implements Visitor{
         }
     }
 
-
-    /**
-     * Check whether provided list of STSymbols representing fields in a class instance, contains
-     * a field with provided name.
-     * @param instanceShape     List of STSymbols representing the LL structure of a class instance
-     * @param fieldName         Field name we search for
-     * @return                  true if class instance has this field, else false
-     */
-    private boolean classInstanceHasField(List<STSymbol> instanceShape, String fieldName) {
-        for (STSymbol field : instanceShape) {
-            if (field.name().equals(fieldName)) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     /**
      * Calculate how many bytes the variable corresponding to the ST symbol provided take up
      * in the stack.
@@ -310,7 +293,7 @@ public class LLVMVisitor implements Visitor{
         /*
           Case 2: assignee is a field of %this
          */
-        if (classInstanceHasField(classInstanceShape, assigneeName)) {
+        if (STLookup.classInstanceHasField(classInstanceShape, assigneeName)) {
             assignStatement.rv().accept(this);
             boolean isNew = assignStatement.rv().getClass().getName().equals("ast.NewObjectExpr") || assignStatement.rv().getClass().getName().equals("ast.NewIntArrayExpr");
             int assignedValReg = isNew ? lastCallocReg : methodCurrRegIndex-1;
@@ -357,7 +340,7 @@ public class LLVMVisitor implements Visitor{
         /*
          * Case 2: assignee is a field of %this
          */
-        else if (classInstanceHasField(classInstanceShape, assigneeName)) {
+        else if (STLookup.classInstanceHasField(classInstanceShape, assigneeName)) {
             assigneePtrReg = methodCurrRegIndex;
             int offset = calcFieldOffset(classInstanceShape, assigneeName);
             LLVMProgram.append(String.format(
@@ -669,7 +652,7 @@ public class LLVMVisitor implements Visitor{
         /*
           Case 2: id is a field of %this
          */
-        if (classInstanceHasField(classInstanceShape, id)) {
+        if (STLookup.classInstanceHasField(classInstanceShape, id)) {
             int offset = calcFieldOffset(classInstanceShape, id);
             int idPtrReg = methodCurrRegIndex;
             LLVMProgram.append(String.format(
