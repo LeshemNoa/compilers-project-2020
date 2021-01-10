@@ -69,7 +69,6 @@ LineTerminator = \r|\n|\r\n
 WhiteSpace = [\t ] | {LineTerminator}
 ID = [a-zA-Z][a-zA-Z0-9_]*
 INTEGER	= 0 | [1-9][0-9]*
-EndComment = \*\/
 
 /******************************/
 /* DOLAR DOLAR - DON'T TOUCH! */
@@ -139,7 +138,6 @@ EndComment = \*\/
 <COMMENT> {
 [^\*]*			{/*do nothing*/}
 \*				{yybegin(COMMENTSTAR);}
-{EndComment} 	{yybegin(YYINITIAL);}
 }
 
 <COMMENTSTAR> {
