@@ -69,6 +69,7 @@ LineTerminator = \r|\n|\r\n
 WhiteSpace = [\t ] | {LineTerminator}
 ID = [a-zA-Z][a-zA-Z0-9_]*
 INTEGER	= 0 | [1-9][0-9]*
+EndComment = \*\/
 
 /******************************/
 /* DOLAR DOLAR - DON'T TOUCH! */
@@ -131,11 +132,19 @@ INTEGER	= 0 | [1-9][0-9]*
 }
 
 <LINECOMMENT> {
-.* {/*do nothing*/}
-NEWLINE {yybegin(YYINITIAL);}
+.* 			{/*do nothing*/}
+{NEWLINE} 	{yybegin(YYINITIAL);}
 }
 
 <COMMENT> {
-(^"*/")* {/*do nothing*/}
-"*/" {yybegin(YYINITIAL);}
+[^\*]*			{/*do nothing*/}
+\*				{yybegin(COMMENTSTAR);}
+{EndComment} 	{yybegin(YYINITIAL);}
 }
+
+<COMMENTSTAR> {
+[^\*\/]			{ yybegin(COMMENT); }
+\* 				{/*do nothing*/}
+\/				{yybegin(YYINITIAL);}
+}
+
