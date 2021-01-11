@@ -70,6 +70,8 @@ WhiteSpace = [\t ] | {LineTerminator}
 ID = [a-zA-Z][a-zA-Z0-9_]*
 INTEGER	= 0 | [1-9][0-9]*
 
+%state LINECOMMENT, COMMENT, COMMENTSTAR
+
 /******************************/
 /* DOLAR DOLAR - DON'T TOUCH! */
 /******************************/
