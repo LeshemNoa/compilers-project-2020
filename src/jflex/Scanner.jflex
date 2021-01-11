@@ -133,12 +133,12 @@ INTEGER	= 0 | [1-9][0-9]*
 }
 
 <LINECOMMENT> {
-.* 			{/*do nothing*/}
+[.].* 			{/*do nothing*/}
 {NEWLINE} 	{yybegin(YYINITIAL);}
 }
 
 <COMMENT> {
-[^\*]*			{/*do nothing*/}
+[^\*][^\*]*			{/*do nothing*/}
 \*				{yybegin(COMMENTSTAR);}
 }
 
