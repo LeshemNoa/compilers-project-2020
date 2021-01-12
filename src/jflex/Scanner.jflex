@@ -64,6 +64,14 @@ import java_cup.runtime.*;
 /* MACRO DECALARATIONS */
 /***********************/
 
+NEWLINE = \n|\r\n
+LineTerminator = \r|\n|\r\n
+WhiteSpace = [\t ] | {LineTerminator}
+ID = [a-zA-Z][a-zA-Z0-9_]*
+INTEGER	= 0 | [1-9][0-9]*
+
+%state LINECOMMENT, COMMENT, COMMENTSTAR
+
 /******************************/
 /* DOLAR DOLAR - DON'T TOUCH! */
 /******************************/
@@ -81,6 +89,62 @@ import java_cup.runtime.*;
 /**************************************************************/
 
 <YYINITIAL> {
-"public"            { return symbol(sym.PUBLIC); }
+"//"            { yybegin(LINECOMMENT); }
+"/*"            { yybegin(COMMENT); }
+"{"				{ return symbol(sym.LBRACE); }
+"}"				{ return symbol(sym.RBRACE); }
+"["				{ return symbol(sym.LBRACKET); }
+"]"				{ return symbol(sym.RBRACKET); }
+"("				{ return symbol(sym.LPAREN); }
+")"				{ return symbol(sym.RPAREN); }
+","				{ return symbol(sym.COMMA); }
+"."				{ return symbol(sym.DOT); }
+"<"				{ return symbol(sym.LT); }
+"&&"			{ return symbol(sym.AND); }
+"+"				{ return symbol(sym.ADD); }
+"="				{ return symbol(sym.ASSIGN); }
+"-"				{ return symbol(sym.SUB); }
+"*"				{ return symbol(sym.MULT); }
+";"				{ return symbol(sym.END); }
+"class"			{ return symbol(sym.CLASS); }
+"public"		{ return symbol(sym.PUBLIC); }
+"static"		{ return symbol(sym.STATIC); }
+"void"			{ return symbol(sym.VOID); }
+"main"			{ return symbol(sym.MAIN); }
+"String"		{ return symbol(sym.STRING); }		
+"extends"		{ return symbol(sym.EXTENDS); }	
+"return"		{ return symbol(sym.RETURN); }	
+"int"			{ return symbol(sym.INT); }
+"boolean"		{ return symbol(sym.BOOL); }	
+"if"			{ return symbol(sym.IF); }
+"else"			{ return symbol(sym.ELSE); }
+"while"			{ return symbol(sym.WHILE); }
+"System.out.println" { return symbol(sym.OUT); }		
+"length"		{ return symbol(sym.LENGTH); }
+"true"			{ return symbol(sym.TRUELITERAL); }
+"false"			{ return symbol(sym.FALSELITERAL); }
+"this"			{ return symbol(sym.THIS); }	
+"new"			{ return symbol(sym.NEW); }
+"!"				{ return symbol(sym.NOT); }
+{ID}			{ return symbol(sym.ID, new String(yytext())); }	
+{INTEGER}		{ return symbol(sym.NUMBER, Integer.parseInt(yytext())); }
+{WhiteSpace}		{/*do nothing*/}		
 <<EOF>>				{ return symbol(sym.EOF); }
 }
+
+<LINECOMMENT> {
+[.].* 			{/*do nothing*/}
+{NEWLINE} 	{yybegin(YYINITIAL);}
+}
+
+<COMMENT> {
+[^\*][^\*]*			{/*do nothing*/}
+\*				{yybegin(COMMENTSTAR);}
+}
+
+<COMMENTSTAR> {
+[^\*\/]			{ yybegin(COMMENT); }
+\* 				{/*do nothing*/}
+\/				{yybegin(YYINITIAL);}
+}
+
