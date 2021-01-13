@@ -63,24 +63,154 @@ scan with
 /*************/
 /* TERMINALS */
 /*************/
+
+terminal AND;
+terminal ASSIGN;
+terminal BOOL;
+terminal CLASS;
+terminal COMMA;
+terminal DOT;
+terminal ELSE;
+terminal EOF;
+terminal EXTENDS;
+terminal FALSE;
+terminal IF;
+terminal INT;
+terminal LBRACE;
+terminal LBRACKET;
+terminal LENGTH;
+terminal LPAREN;
+terminal LT;
+terminal MAIN;
+terminal MINUS;
+terminal MULT;
+terminal NEW;
+terminal NOT;
+terminal OUT;
+terminal PLUS;
 terminal PUBLIC;
+terminal RBRACE;
+terminal RBRACKET;
+terminal RETURN;
+terminal RPAREN;
+terminal SEMICOLON;
+terminal STATIC;
+terminal STRING;
+terminal THIS;
+terminal TRUE;
+terminal VOID;
+terminal WHILE;
+
+/* tokens with values */
+terminal String ID;
+terminal Integer NUMBER;
 
 /*****************/
 /* NON TERMINALS */
 /*****************/
-non terminal prog;
+non terminal Program Program;
+non terminal ArrayAccessExpr ArrayAccess;
+non terminal ArrayLengthExpr ArrayLength;
+non terminal AstType Type;
+non terminal ClassDecl ClassDecl;
+non terminal Expr Expr;
+non terminal FormalArg FormalArg;
+non terminal IdentifierExpr Identifier;
+non terminal List<ClassDecl> ClassDeclList;
+non terminal List<Expr> ExprList;
+non terminal List<FormalArg> FormalArgsList;
+non terminal List<MethodDecl> MethodDeclList;
+non terminal List<Statement> StmtList;
+non terminal List<VarDecl> VarDeclList;
+non terminal MainClass MainClass;
+non terminal MethodDecl MethodDecl;
+non terminal Statement Statement;
+non terminal VarDecl VarDecl;
 
 /***********************/
 /* OPERATOR PRECEDENCE */
 /***********************/
+precedence nonassoc ASSIGN;
+precedence nonassoc AND;
+precedence left LT;
+precedence left PLUS, MINUS;
+precedence left MULT;
+precedence right NOT, NEW;
+precedence left DOT;
 
 /************************/
 /* INITIAL NON TERMINAL */
 /************************/
-start with prog;
+start with Program;
 
 /********************/
 /* PRODUCTION RULES */
 /********************/
 
-prog            ::=     ;
+Program         ::=     MainClass:mainClass ClassDeclList:classDecls {: RESULT = new Program(mainClass, classDecls); :};
+
+MainClass       ::=     CLASS ID:className LBRACE PUBLIC STATIC VOID MAIN LPAREN STRING LBRACKET RBRACKET ID:argsName RPAREN LBRACE Statement:mainStmt RBRACE RBRACE
+                                                                     {: RESULT = new MainClass(className, argsName, mainStmt); :}
+
+ClassDecl       ::=     CLASS ID:className LBRACE VarDeclList:fieldDecls MethodDeclList: methodDecls RBRACE
+                                                                     {: Result = new ClassDecl(className, null, fieldDecls, MethodDecls); :}
+                  |    CLASS ID:className EXTENDS ID:superName LBRACE VarDeclList:fieldDecls MethodDeclList: methodDecls RBRACE
+                                                                     {: Result = new ClassDecl(className, superName, fieldDecls, MethodDecls); :}
+
+ClassDeclList   ::=   ClassDeclList:classDecls ClassDecl:decl        {: RESULT = classDecls.add(decl); :}
+                  |   /* empty list */                               {: Result = new LinkedList<ClassDecl>(); :}
+
+VarDecl         ::=     Type:type ID:name SEMICOLON                  {: RESULT = new VarDecl(type, name, typeleft); :}
+
+VarDeclList     ::=     VarDeclList:varDecls VarDecl:decl            {: RESULT = varDecls.add(decl); :}
+                  |     /* empty list  */                            {: RESULT = new LinkedList<VarDecl>(); :}
+
+MethodDecl      ::=     PUBLIC:public Type:retType ID:name LPAREN FormalArgsList:formals RPAREN LBRACE VarDeclList:varDecls StmtList:statements RETURN Expr:e SEMICOLON
+                                                                     {: RESULT = new MethodDecl(retType, name, formals, varDecls, statements, e, publicleft); :}
+
+MethodDeclList  ::=   MethodDecl:decl MethodDeclList:methodDecls     {: RESULT = methodDecls.add(0, decl); :}
+                  |  /* empty list  */                               {: Result = new LinkedList<MethodDecls>(); :}
+
+FormalArg       ::=     Type:type ID:argName                         {: RESULT = new FormalArg(argType, argName, typeleft); :}
+
+FormalArgList   ::=   FormalArg:formal                                 {: RESULT = new LinkedList<FormalArg>(); RESULT.add(formalArg); :}
+                  |   FormalArgList:formals COMMA FormalArg:head       {: RESULT = formals.add(0, head); :}
+                  |   /* empty list  */                                {: RESULT = new LinkedList<FormalArg>(); :}
+
+                  }
+Statement       ::=   LBRACE StmtList:stmtList RBRACE                  {: RESULT = new BlockStatement(stmtList); :}
+                  |   IF LPAREN Expr:cond RPAREN Statement:then ELSE Statement:else
+                                                                       {: RESULT = new IfStatement(cond, then, else); :}
+                  |   WHILE LPAREN Expr:cond RPAREN Statement:body     {: RESULT = new WhileStatement(cond, body); :}
+                  |   OUT LPAREN Expr:output RPAREN SEMICOLON          {: RESULT = new SysoutStatement(output); :}
+                  |   ID:lv ASSIGN Expr:rv SEMICOLON                   {: RESULT = new AssignStatement(lv, rv); :}
+                  |   ID:lv LBRACKET Expr:index RBRACKET ASSIGN Expr:rv SEMICOLON
+                                                                       {: RESULT = new AssignArrayStatement(lv, index, rv); :}
+
+StmtList        ::=   Statement: first StatementList: stmtList         {: RESULT = stmtList.add(0, first); :}
+                  |   /* empty list  */                                {: RESULT = new LinkedList<Statement>; :}
+
+Expr            ::=   Expr:e1 AND Expr:e2                              {: RESULT = new AndExpr(e1, e2); :}
+                  |   Expr:e1 PLUS Expr:e2                             {: RESULT = new AddExpr(e1, e2); :}
+                  |   Expr:e1 MINUS Expr:e2                            {: RESULT = new SubtractExpr(e1, e2); :}
+                  |   Expr:e1 MULT Expr:e2                             {: RESULT = new MultExpr(e1, e2); :}
+                  |   Expr:e1 LT Expr:e2                               {: RESULT = new LtExpr(e1, e2); :}
+                  |   Expr:array LBRACKET Expr:index RBRACKET          {: RESULT = new ArrayAccessExpr(array, index); :}
+                  |   Expr:array DOT LENGTH                            {: RESULT = new ArrayLengthExpr(array); :}
+                  |   Expr:owner DOT ID:methodId LPAREN ExprList:params RPAREN
+                                                                       {: RESULT = new MethodCallExpr(owner, methodId, params); :}
+                  |   NUMBER:num                                       {: RESULT = new IntegerLiteralExpr(num); :}
+                  |   TRUE                                             {: RESULT = new TrueExpr(); :}
+                  |   FALSE                                            {: RESULT = new FalseExpr(); :}
+                  |   ID:id                                            {: RESULT = new IdentifierExpr(id); :}
+                  |   THIS                                             {: RESULT = new ThisExpr(); :}
+                  |   NEW INT LBRACKET Expr:sizeExpr RBRACKET          {: RESULT = new NewIntArrayExpr(sizeExpr); :}
+                  |   NEW ID:className LPAREN RPAREN                   {: RESULT = new NewObjectExpr(className); :}
+                  |   NOT Expr:e                                       {: RESULT = new NotExpr(e); :}
+                  |   RPAREN Expr:e LPAREN                             {: RESULT = e; :}
+
+ExprList        ::=   Expr:e                                           {: RESULT = new LinkedList<FormalArg>(); RESULT.add(e); :}
+                  |   Expr:head COMMA ExprList:exprList                {: RESULT = exprList.add(0, head); :}
+                  |   /* empty list */                                 {: RESULT = new LinkedList<Expr>(); :}
+
+

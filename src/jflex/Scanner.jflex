@@ -101,11 +101,11 @@ INTEGER	= 0 | [1-9][0-9]*
 "."				{ return symbol(sym.DOT); }
 "<"				{ return symbol(sym.LT); }
 "&&"			{ return symbol(sym.AND); }
-"+"				{ return symbol(sym.ADD); }
+"+"				{ return symbol(sym.PLUS); }
 "="				{ return symbol(sym.ASSIGN); }
 "-"				{ return symbol(sym.SUB); }
-"*"				{ return symbol(sym.MULT); }
-";"				{ return symbol(sym.END); }
+"*"				{ return symbol(sym.MINUS); }
+";"				{ return symbol(sym.SEMICOLON); }
 "class"			{ return symbol(sym.CLASS); }
 "public"		{ return symbol(sym.PUBLIC); }
 "static"		{ return symbol(sym.STATIC); }
@@ -121,8 +121,8 @@ INTEGER	= 0 | [1-9][0-9]*
 "while"			{ return symbol(sym.WHILE); }
 "System.out.println" { return symbol(sym.OUT); }		
 "length"		{ return symbol(sym.LENGTH); }
-"true"			{ return symbol(sym.TRUELITERAL); }
-"false"			{ return symbol(sym.FALSELITERAL); }
+"true"			{ return symbol(sym.TRUE); }
+"false"			{ return symbol(sym.FALSE); }
 "this"			{ return symbol(sym.THIS); }	
 "new"			{ return symbol(sym.NEW); }
 "!"				{ return symbol(sym.NOT); }
