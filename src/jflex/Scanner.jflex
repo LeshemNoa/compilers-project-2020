@@ -103,7 +103,7 @@ INTEGER	= 0 | [1-9][0-9]*
 "&&"			{ return symbol(sym.AND); }
 "+"				{ return symbol(sym.PLUS); }
 "="				{ return symbol(sym.ASSIGN); }
-"-"				{ return symbol(sym.SUB); }
+"-"				{ return symbol(sym.MINUS); }
 "*"				{ return symbol(sym.MINUS); }
 ";"				{ return symbol(sym.SEMICOLON); }
 "class"			{ return symbol(sym.CLASS); }
