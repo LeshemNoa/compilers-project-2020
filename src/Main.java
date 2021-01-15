@@ -13,7 +13,7 @@ public class Main {
             Program prog;
 
             if (inputMethod.equals("parse")) {
-                Parser p = new Parser(new Lexer(FileReader(filename)));
+                Parser p = new Parser(new Lexer(new FileReader(filename)));
                 prog = (Program) (p.parse().value);
                 AstXMLSerializer xmlSerializer = new AstXMLSerializer();
                 xmlSerializer.serialize(prog, outfilename);

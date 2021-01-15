@@ -148,41 +148,41 @@ MainClass       ::=     CLASS ID:className LBRACE PUBLIC STATIC VOID MAIN LPAREN
                                                                      {: RESULT = new MainClass(className, argsName, mainStmt); :};
 
 ClassDecl       ::=     CLASS ID:className LBRACE VarDeclList:fieldDecls MethodDeclList: methodDecls RBRACE
-                                                                     {: Result = new ClassDecl(className, null, fieldDecls, MethodDecls); :}
+                                                                     {: RESULT = new ClassDecl(className, null, fieldDecls, methodDecls); :}
                   |    CLASS ID:className EXTENDS ID:superName LBRACE VarDeclList:fieldDecls MethodDeclList: methodDecls RBRACE
-                                                                     {: Result = new ClassDecl(className, superName, fieldDecls, MethodDecls); :};
+                                                                     {: RESULT = new ClassDecl(className, superName, fieldDecls, methodDecls); :};
 
-ClassDeclList   ::=   ClassDeclList:classDecls ClassDecl:decl        {: RESULT = classDecls.add(decl); :}
-                  |   /* empty list */                               {: Result = new LinkedList<ClassDecl>(); :};
+ClassDeclList   ::=   ClassDeclList:classDecls ClassDecl:decl        {: classDecls.add(decl); RESULT = classDecls; :}
+                  |   /* empty list */                               {: RESULT = new LinkedList<ClassDecl>(); :};
 
 VarDecl         ::=     Type:type ID:name SEMICOLON                  {: RESULT = new VarDecl(type, name, typeleft); :};
 
-VarDeclList     ::=     VarDeclList:varDecls VarDecl:decl            {: RESULT = varDecls.add(decl); :}
+VarDeclList     ::=     VarDeclList:varDecls VarDecl:decl            {: varDecls.add(decl); RESULT = varDecls; :}
                   |     /* empty list  */                            {: RESULT = new LinkedList<VarDecl>(); :};
 
-MethodDecl      ::=     PUBLIC:public Type:retType ID:name LPAREN FormalArgsList:formals RPAREN LBRACE VarDeclList:varDecls StmtList:statements RETURN Expr:e SEMICOLON
-                                                                     {: RESULT = new MethodDecl(retType, name, formals, varDecls, statements, e, publicleft); :};
+MethodDecl      ::=     PUBLIC:p Type:retType ID:name LPAREN FormalArgsList:formals RPAREN LBRACE VarDeclList:varDecls StmtList:statements RETURN Expr:e SEMICOLON
+                                                                     {: RESULT = new MethodDecl(retType, name, formals, varDecls, statements, e, pleft); :};
 
-MethodDeclList  ::=   MethodDecl:decl MethodDeclList:methodDecls     {: RESULT = methodDecls.add(0, decl); :}
-                  |  /* empty list  */                               {: Result = new LinkedList<MethodDecls>(); :};
+MethodDeclList  ::=   MethodDecl:decl MethodDeclList:methodDecls     {: methodDecls.add(0, decl); RESULT = methodDecls; :}
+                  |  /* empty list  */                               {: RESULT = new LinkedList<MethodDecl>(); :};
 
-FormalArg       ::=     Type:type ID:argName                         {: RESULT = new FormalArg(argType, argName, typeleft); :};
+FormalArg       ::=     Type:type ID:argName                         {: RESULT = new FormalArg(type, argName, typeleft); :};
 
-FormalArgsList   ::=   FormalArg:formal                                 {: RESULT = new LinkedList<FormalArg>(); RESULT.add(formalArg); :}
-                  |   FormalArgsList:formals COMMA FormalArg:head       {: RESULT = formals.add(0, head); :}
+FormalArgsList   ::=   FormalArg:formal                                 {: RESULT = new LinkedList<FormalArg>(); RESULT.add(formal); :}
+                  |   FormalArgsList:formals COMMA FormalArg:head       {: formals.add(0, head); RESULT = formals; :}
                   |   /* empty list  */                                {: RESULT = new LinkedList<FormalArg>(); :};
 
 Statement       ::=   LBRACE StmtList:stmtList RBRACE                  {: RESULT = new BlockStatement(stmtList); :}
-                  |   IF LPAREN Expr:cond RPAREN Statement:then ELSE Statement:else
-                                                                       {: RESULT = new IfStatement(cond, then, else); :}
+                  |   IF LPAREN Expr:cond RPAREN Statement:thenCase ELSE Statement:elseCase
+                                                                       {: RESULT = new IfStatement(cond, thenCase, elseCase); :}
                   |   WHILE LPAREN Expr:cond RPAREN Statement:body     {: RESULT = new WhileStatement(cond, body); :}
                   |   OUT LPAREN Expr:output RPAREN SEMICOLON          {: RESULT = new SysoutStatement(output); :}
                   |   ID:lv ASSIGN Expr:rv SEMICOLON                   {: RESULT = new AssignStatement(lv, rv); :}
                   |   ID:lv LBRACKET Expr:index RBRACKET ASSIGN Expr:rv SEMICOLON
                                                                        {: RESULT = new AssignArrayStatement(lv, index, rv); :};
 
-StmtList        ::=   Statement: first StmtList: stmtList         {: RESULT = stmtList.add(0, first); :}
-                  |   /* empty list  */                                {: RESULT = new LinkedList<Statement>; :};
+StmtList        ::=   Statement: first StmtList: stmtList         {: stmtList.add(0, first); RESULT = stmtList; :}
+                  |   /* empty list  */                                {: RESULT = new LinkedList<Statement>(); :};
 
 Expr            ::=   Expr:e1 AND Expr:e2                              {: RESULT = new AndExpr(e1, e2); :}
                   |   Expr:e1 PLUS Expr:e2                             {: RESULT = new AddExpr(e1, e2); :}
@@ -203,8 +203,8 @@ Expr            ::=   Expr:e1 AND Expr:e2                              {: RESULT
                   |   NOT Expr:e                                       {: RESULT = new NotExpr(e); :}
                   |   LPAREN Expr:e RPAREN                             {: RESULT = e; :};
 
-ExprList        ::=   Expr:e                                           {: RESULT = new LinkedList<FormalArg>(); RESULT.add(e); :}
-                  |   Expr:head COMMA ExprList:exprList                {: RESULT = exprList.add(0, head); :}
+ExprList        ::=   Expr:e                                           {: RESULT = new LinkedList<Expr>(); RESULT.add(e); :}
+                  |   Expr:head COMMA ExprList:exprList                {: exprList.add(0, head); RESULT = exprList; :}
                   |   /* empty list */                                 {: RESULT = new LinkedList<Expr>(); :};
 
 
