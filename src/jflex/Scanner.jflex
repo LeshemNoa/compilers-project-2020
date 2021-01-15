@@ -114,8 +114,7 @@ INTEGER	= 0 | [1-9][0-9]*
 "String"		{ return symbol(sym.STRING); }		
 "extends"		{ return symbol(sym.EXTENDS); }	
 "return"		{ return symbol(sym.RETURN); }	
-"int"			{ return symbol(sym.INT); }
-"boolean"		{ return symbol(sym.BOOL); }	
+"int"			{ return symbol(sym.INT); }	
 "if"			{ return symbol(sym.IF); }
 "else"			{ return symbol(sym.ELSE); }
 "while"			{ return symbol(sym.WHILE); }
