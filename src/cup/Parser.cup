@@ -66,6 +66,7 @@ scan with
 
 terminal AND;
 terminal ASSIGN;
+terminal BOOL_TYPE;
 terminal CLASS;
 terminal COMMA;
 terminal DOT;
@@ -73,7 +74,7 @@ terminal ELSE;
 terminal EXTENDS;
 terminal FALSE;
 terminal IF;
-terminal INT;
+terminal INT_TYPE;
 terminal LBRACE;
 terminal LBRACKET;
 terminal LENGTH;
@@ -142,12 +143,13 @@ start with Program;
 /* PRODUCTION RULES */
 /********************/
 
-Program         ::=     MainClass:mainClass ClassDeclList:classDecls {: RESULT = new Program(mainClass, classDecls); :};
+Program         ::=     MainClass:mainClass ClassDeclList:classDecls
+                                                                      {: RESULT = new Program(mainClass, classDecls); :};
 
 MainClass       ::=     CLASS ID:className LBRACE PUBLIC STATIC VOID MAIN LPAREN STRING LBRACKET RBRACKET ID:argsName RPAREN LBRACE Statement:mainStmt RBRACE RBRACE
                                                                      {: RESULT = new MainClass(className, argsName, mainStmt); :};
 
-ClassDecl       ::=     CLASS ID:className LBRACE VarDeclList:fieldDecls MethodDeclList: methodDecls RBRACE
+ClassDecl       ::=     CLASS ID:className LBRACE VarDeclList:fieldDecls MethodDeclList:methodDecls RBRACE
                                                                      {: RESULT = new ClassDecl(className, null, fieldDecls, methodDecls); :}
                   |    CLASS ID:className EXTENDS ID:superName LBRACE VarDeclList:fieldDecls MethodDeclList: methodDecls RBRACE
                                                                      {: RESULT = new ClassDecl(className, superName, fieldDecls, methodDecls); :};
@@ -160,16 +162,16 @@ VarDecl         ::=     Type:type ID:name SEMICOLON                  {: RESULT =
 VarDeclList     ::=     VarDeclList:varDecls VarDecl:decl            {: varDecls.add(decl); RESULT = varDecls; :}
                   |     /* empty list  */                            {: RESULT = new LinkedList<VarDecl>(); :};
 
-MethodDecl      ::=     PUBLIC:p Type:retType ID:name LPAREN FormalArgsList:formals RPAREN LBRACE VarDeclList:varDecls StmtList:statements RETURN Expr:e SEMICOLON
+MethodDecl      ::=     PUBLIC:p Type:retType ID:name LPAREN FormalArgsList:formals RPAREN LBRACE VarDeclList:varDecls StmtList:statements RETURN Expr:e SEMICOLON RBRACE
                                                                      {: RESULT = new MethodDecl(retType, name, formals, varDecls, statements, e, pleft); :};
 
-MethodDeclList  ::=   MethodDecl:decl MethodDeclList:methodDecls     {: methodDecls.add(0, decl); RESULT = methodDecls; :}
+MethodDeclList  ::=  MethodDeclList:methodDecls MethodDecl:decl     {: methodDecls.add(0, decl); RESULT = methodDecls; :}
                   |  /* empty list  */                               {: RESULT = new LinkedList<MethodDecl>(); :};
 
 FormalArg       ::=     Type:type ID:argName                         {: RESULT = new FormalArg(type, argName, typeleft); :};
 
-FormalArgsList   ::=   FormalArg:formal                                 {: RESULT = new LinkedList<FormalArg>(); RESULT.add(formal); :}
-                  |   FormalArgsList:formals COMMA FormalArg:head       {: formals.add(0, head); RESULT = formals; :}
+FormalArgsList   ::=  FormalArg:formal                                 {: RESULT = new LinkedList<FormalArg>(); RESULT.add(formal); :}
+                  |   FormalArgsList:formals COMMA FormalArg:head       {: formals.add(head); RESULT = formals; :}
                   |   /* empty list  */                                {: RESULT = new LinkedList<FormalArg>(); :};
 
 Statement       ::=   LBRACE StmtList:stmtList RBRACE                  {: RESULT = new BlockStatement(stmtList); :}
@@ -181,7 +183,7 @@ Statement       ::=   LBRACE StmtList:stmtList RBRACE                  {: RESULT
                   |   ID:lv LBRACKET Expr:index RBRACKET ASSIGN Expr:rv SEMICOLON
                                                                        {: RESULT = new AssignArrayStatement(lv, index, rv); :};
 
-StmtList        ::=   Statement: first StmtList: stmtList         {: stmtList.add(0, first); RESULT = stmtList; :}
+StmtList        ::=   Statement:head StmtList:stmtList                  {: stmtList.add(0, head); RESULT = stmtList; :}
                   |   /* empty list  */                                {: RESULT = new LinkedList<Statement>(); :};
 
 Expr            ::=   Expr:e1 AND Expr:e2                              {: RESULT = new AndExpr(e1, e2); :}
@@ -198,13 +200,16 @@ Expr            ::=   Expr:e1 AND Expr:e2                              {: RESULT
                   |   FALSE                                            {: RESULT = new FalseExpr(); :}
                   |   ID:id                                            {: RESULT = new IdentifierExpr(id); :}
                   |   THIS                                             {: RESULT = new ThisExpr(); :}
-                  |   NEW INT LBRACKET Expr:sizeExpr RBRACKET          {: RESULT = new NewIntArrayExpr(sizeExpr); :}
+                  |   NEW INT_TYPE LBRACKET Expr:sizeExpr RBRACKET          {: RESULT = new NewIntArrayExpr(sizeExpr); :}
                   |   NEW ID:className LPAREN RPAREN                   {: RESULT = new NewObjectExpr(className); :}
                   |   NOT Expr:e                                       {: RESULT = new NotExpr(e); :}
                   |   LPAREN Expr:e RPAREN                             {: RESULT = e; :};
 
 ExprList        ::=   Expr:e                                           {: RESULT = new LinkedList<Expr>(); RESULT.add(e); :}
-                  |   Expr:head COMMA ExprList:exprList                {: exprList.add(0, head); RESULT = exprList; :}
+                  |   ExprList:exprList COMMA Expr:head                {: exprList.add(head); RESULT = exprList; :}
                   |   /* empty list */                                 {: RESULT = new LinkedList<Expr>(); :};
 
-
+Type            ::=     INT_TYPE                                          {: RESULT = new IntAstType(); :}
+                  |     BOOL_TYPE                                           {: RESULT = new BoolAstType(); :}
+                  |     ID:className                                        {: RESULT = new RefType(className); :}
+                  |     INT_TYPE LBRACKET RBRACKET                        {: RESULT = new IntArrayAstType(); :};

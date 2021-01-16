@@ -64,13 +64,13 @@ import java_cup.runtime.*;
 /* MACRO DECALARATIONS */
 /***********************/
 
-NEWLINE = \n|\r\n
 LineTerminator = \r|\n|\r\n
+NotLineTerminator = [^\r\n]
 WhiteSpace = [\t ] | {LineTerminator}
 ID = [a-zA-Z][a-zA-Z0-9_]*
 INTEGER	= 0 | [1-9][0-9]*
-
-%state LINECOMMENT, COMMENT, COMMENTSTAR
+MultiLineComment = "/*" ~ "*/"
+LineComment = "//"{NotLineTerminator}*{LineTerminator}?
 
 /******************************/
 /* DOLAR DOLAR - DON'T TOUCH! */
@@ -89,8 +89,6 @@ INTEGER	= 0 | [1-9][0-9]*
 /**************************************************************/
 
 <YYINITIAL> {
-"//"            { yybegin(LINECOMMENT); }
-"/*"            { yybegin(COMMENT); }
 "{"				{ return symbol(sym.LBRACE); }
 "}"				{ return symbol(sym.RBRACE); }
 "["				{ return symbol(sym.LBRACKET); }
@@ -114,7 +112,8 @@ INTEGER	= 0 | [1-9][0-9]*
 "String"		{ return symbol(sym.STRING); }		
 "extends"		{ return symbol(sym.EXTENDS); }	
 "return"		{ return symbol(sym.RETURN); }	
-"int"			{ return symbol(sym.INT); }	
+"int"			{ return symbol(sym.INT_TYPE); }
+"boolean"       { return symbol(sym.BOOL_TYPE); }
 "if"			{ return symbol(sym.IF); }
 "else"			{ return symbol(sym.ELSE); }
 "while"			{ return symbol(sym.WHILE); }
@@ -127,23 +126,11 @@ INTEGER	= 0 | [1-9][0-9]*
 "!"				{ return symbol(sym.NOT); }
 {ID}			{ return symbol(sym.ID, new String(yytext())); }	
 {INTEGER}		{ return symbol(sym.NUMBER, Integer.parseInt(yytext())); }
-{WhiteSpace}		{/*do nothing*/}		
+{WhiteSpace}+		{/*do nothing*/}
+{LineComment}       {/*do nothing*/}
+{MultiLineComment}  {/*do nothing*/}
 <<EOF>>				{ return symbol(sym.EOF); }
+.                   { throw new java.lang.Error(); }
 }
 
-<LINECOMMENT> {
-[.].* 			{/*do nothing*/}
-{NEWLINE} 	{yybegin(YYINITIAL);}
-}
-
-<COMMENT> {
-[^\*][^\*]*			{/*do nothing*/}
-\*				{yybegin(COMMENTSTAR);}
-}
-
-<COMMENTSTAR> {
-[^\*\/]			{ yybegin(COMMENT); }
-\* 				{/*do nothing*/}
-\/				{yybegin(YYINITIAL);}
-}
 

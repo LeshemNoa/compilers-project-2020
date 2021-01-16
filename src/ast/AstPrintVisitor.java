@@ -157,12 +157,12 @@ public class AstPrintVisitor implements Visitor {
     public void visit(WhileStatement whileStatement) {
         appendWithIndent("while (");
         whileStatement.cond().accept(this);
-        builder.append(") {");
+        builder.append(")");
         indent++;
         whileStatement.body().accept(this);
         indent--;
         builder.append("\n");
-        appendWithIndent("}\n");
+        appendWithIndent("\n");
     }
 
     @Override
