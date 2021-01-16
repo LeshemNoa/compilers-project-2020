@@ -11,7 +11,7 @@ public abstract class AstNode {
         enclosingScope = null;
     }
 
-    public AstNode(int lineNumber) {
+    public AstNode(Integer lineNumber) {
         this.lineNumber = lineNumber;
     }
 

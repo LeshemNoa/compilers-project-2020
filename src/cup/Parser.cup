@@ -157,18 +157,18 @@ ClassDecl       ::=     CLASS ID:className LBRACE VarDeclList:fieldDecls MethodD
 ClassDeclList   ::=   ClassDeclList:classDecls ClassDecl:decl        {: classDecls.add(decl); RESULT = classDecls; :}
                   |   /* empty list */                               {: RESULT = new LinkedList<ClassDecl>(); :};
 
-VarDecl         ::=     Type:type ID:name SEMICOLON                  {: RESULT = new VarDecl(type, name, typeleft); :};
+VarDecl         ::=     Type:type ID:name SEMICOLON                  {: RESULT = new VarDecl(type, name, null); :};
 
 VarDeclList     ::=     VarDeclList:varDecls VarDecl:decl            {: varDecls.add(decl); RESULT = varDecls; :}
                   |     /* empty list  */                            {: RESULT = new LinkedList<VarDecl>(); :};
 
 MethodDecl      ::=     PUBLIC:p Type:retType ID:name LPAREN FormalArgsList:formals RPAREN LBRACE VarDeclList:varDecls StmtList:statements RETURN Expr:e SEMICOLON RBRACE
-                                                                     {: RESULT = new MethodDecl(retType, name, formals, varDecls, statements, e, pleft); :};
+                                                                     {: RESULT = new MethodDecl(retType, name, formals, varDecls, statements, e, null); :};
 
 MethodDeclList  ::=  MethodDeclList:methodDecls MethodDecl:decl     {: methodDecls.add(0, decl); RESULT = methodDecls; :}
                   |  /* empty list  */                               {: RESULT = new LinkedList<MethodDecl>(); :};
 
-FormalArg       ::=     Type:type ID:argName                         {: RESULT = new FormalArg(type, argName, typeleft); :};
+FormalArg       ::=     Type:type ID:argName                         {: RESULT = new FormalArg(type, argName, null); :};
 
 FormalArgsList   ::=  FormalArg:formal                                 {: RESULT = new LinkedList<FormalArg>(); RESULT.add(formal); :}
                   |   FormalArgsList:formals COMMA FormalArg:head       {: formals.add(head); RESULT = formals; :}

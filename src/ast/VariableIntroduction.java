@@ -14,7 +14,7 @@ public abstract class VariableIntroduction extends AstNode {
     public VariableIntroduction() {
     }
 
-    public VariableIntroduction(AstType type, String name, int lineNumber) {
+    public VariableIntroduction(AstType type, String name, Integer lineNumber) {
         super(lineNumber);
         this.type = new AstTypeWrapper(type);
         this.name = name;
