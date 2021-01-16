@@ -114,7 +114,9 @@ non terminal Expr Expr;
 non terminal FormalArg FormalArg;
 non terminal List<ClassDecl> ClassDeclList;
 non terminal List<Expr> ExprList;
+non terminal List<Expr> MethodCallParamsParens;
 non terminal List<FormalArg> FormalArgsList;
+non terminal List<FormalArg> FormalArgListParens;
 non terminal List<MethodDecl> MethodDeclList;
 non terminal List<Statement> StmtList;
 non terminal List<VarDecl> VarDeclList;
@@ -127,11 +129,13 @@ non terminal VarDecl VarDecl;
 /* OPERATOR PRECEDENCE */
 /***********************/
 precedence nonassoc ASSIGN;
-precedence nonassoc AND;
+precedence left AND;
 precedence left LT;
 precedence left PLUS, MINUS;
 precedence left MULT;
+precedence left LBRACKET, LPAREN;
 precedence right NOT, NEW;
+precedence right LBRACKET, LPAREN;
 precedence left DOT;
 
 /************************/
@@ -157,22 +161,24 @@ ClassDecl       ::=     CLASS ID:className LBRACE VarDeclList:fieldDecls MethodD
 ClassDeclList   ::=   ClassDeclList:classDecls ClassDecl:decl        {: classDecls.add(decl); RESULT = classDecls; :}
                   |   /* empty list */                               {: RESULT = new LinkedList<ClassDecl>(); :};
 
-VarDecl         ::=     Type:type ID:name SEMICOLON                  {: RESULT = new VarDecl(type, name, null); :};
+VarDecl         ::=     Type:type ID:name SEMICOLON                  {: RESULT = new VarDecl(type, name, typeleft); :};
 
 VarDeclList     ::=     VarDeclList:varDecls VarDecl:decl            {: varDecls.add(decl); RESULT = varDecls; :}
                   |     /* empty list  */                            {: RESULT = new LinkedList<VarDecl>(); :};
 
-MethodDecl      ::=     PUBLIC:p Type:retType ID:name LPAREN FormalArgsList:formals RPAREN LBRACE VarDeclList:varDecls StmtList:statements RETURN Expr:e SEMICOLON RBRACE
-                                                                     {: RESULT = new MethodDecl(retType, name, formals, varDecls, statements, e, null); :};
+MethodDecl      ::=     PUBLIC:p Type:retType ID:name FormalArgListParens:formals LBRACE VarDeclList:varDecls StmtList:statements RETURN Expr:e SEMICOLON RBRACE
+                                                                     {: RESULT = new MethodDecl(retType, name, formals, varDecls, statements, e, pleft); :};
 
-MethodDeclList  ::=  MethodDeclList:methodDecls MethodDecl:decl     {: methodDecls.add(0, decl); RESULT = methodDecls; :}
-                  |  /* empty list  */                               {: RESULT = new LinkedList<MethodDecl>(); :};
+MethodDeclList  ::=  MethodDecl:decl MethodDeclList:methodDecls     {: methodDecls.add(0, decl); RESULT = methodDecls; :}
+                  |  /* empty list */                               {: RESULT = new LinkedList<MethodDecl>(); :};
 
-FormalArg       ::=     Type:type ID:argName                         {: RESULT = new FormalArg(type, argName, null); :};
+FormalArg       ::=     Type:type ID:argName                         {: RESULT = new FormalArg(type, argName, typeleft); :};
 
 FormalArgsList   ::=  FormalArg:formal                                 {: RESULT = new LinkedList<FormalArg>(); RESULT.add(formal); :}
-                  |   FormalArgsList:formals COMMA FormalArg:head       {: formals.add(head); RESULT = formals; :}
-                  |   /* empty list  */                                {: RESULT = new LinkedList<FormalArg>(); :};
+                  |   FormalArg:head COMMA FormalArgsList:formals      {: formals.add(0, head); RESULT = formals; :};
+
+FormalArgListParens ::= LPAREN RPAREN                                   {: RESULT = new LinkedList<FormalArg>(); :}
+                      | LPAREN FormalArgsList:argList RPAREN            {: RESULT = argList; :};
 
 Statement       ::=   LBRACE StmtList:stmtList RBRACE                  {: RESULT = new BlockStatement(stmtList); :}
                   |   IF LPAREN Expr:cond RPAREN Statement:thenCase ELSE Statement:elseCase
@@ -193,21 +199,24 @@ Expr            ::=   Expr:e1 AND Expr:e2                              {: RESULT
                   |   Expr:e1 LT Expr:e2                               {: RESULT = new LtExpr(e1, e2); :}
                   |   Expr:array LBRACKET Expr:index RBRACKET          {: RESULT = new ArrayAccessExpr(array, index); :}
                   |   Expr:array DOT LENGTH                            {: RESULT = new ArrayLengthExpr(array); :}
-                  |   Expr:owner DOT ID:methodId LPAREN ExprList:params RPAREN
+                  |   Expr:owner DOT ID:methodId MethodCallParamsParens:params
                                                                        {: RESULT = new MethodCallExpr(owner, methodId, params); :}
                   |   NUMBER:num                                       {: RESULT = new IntegerLiteralExpr(num); :}
                   |   TRUE                                             {: RESULT = new TrueExpr(); :}
                   |   FALSE                                            {: RESULT = new FalseExpr(); :}
                   |   ID:id                                            {: RESULT = new IdentifierExpr(id); :}
                   |   THIS                                             {: RESULT = new ThisExpr(); :}
-                  |   NEW INT_TYPE LBRACKET Expr:sizeExpr RBRACKET          {: RESULT = new NewIntArrayExpr(sizeExpr); :}
+                  |   NEW INT_TYPE LBRACKET Expr:sizeExpr RBRACKET     {: RESULT = new NewIntArrayExpr(sizeExpr); :}
                   |   NEW ID:className LPAREN RPAREN                   {: RESULT = new NewObjectExpr(className); :}
                   |   NOT Expr:e                                       {: RESULT = new NotExpr(e); :}
                   |   LPAREN Expr:e RPAREN                             {: RESULT = e; :};
 
 ExprList        ::=   Expr:e                                           {: RESULT = new LinkedList<Expr>(); RESULT.add(e); :}
-                  |   ExprList:exprList COMMA Expr:head                {: exprList.add(head); RESULT = exprList; :}
-                  |   /* empty list */                                 {: RESULT = new LinkedList<Expr>(); :};
+                  |   Expr:head COMMA ExprList:exprList                {: exprList.add(0, head); RESULT = exprList; :};
+
+MethodCallParamsParens ::=      LPAREN RPAREN                                   {: RESULT = new LinkedList<Expr>(); :}
+                 |    LPAREN ExprList:exprList RPAREN                   {: RESULT = exprList; :};
+
 
 Type            ::=     INT_TYPE                                          {: RESULT = new IntAstType(); :}
                   |     BOOL_TYPE                                           {: RESULT = new BoolAstType(); :}

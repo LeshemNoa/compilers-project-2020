@@ -102,7 +102,7 @@ LineComment = "//"{NotLineTerminator}*{LineTerminator}?
 "+"				{ return symbol(sym.PLUS); }
 "="				{ return symbol(sym.ASSIGN); }
 "-"				{ return symbol(sym.MINUS); }
-"*"				{ return symbol(sym.MINUS); }
+"*"				{ return symbol(sym.MULT); }
 ";"				{ return symbol(sym.SEMICOLON); }
 "class"			{ return symbol(sym.CLASS); }
 "public"		{ return symbol(sym.PUBLIC); }

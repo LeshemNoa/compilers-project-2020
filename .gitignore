@@ -38,3 +38,9 @@ src/sym.java
 
 # ignore examples, tests etc
 examples
+
+src/Parser.java
+src/Lexer.java
+src/Lexer.java~
+src/Parser.java~
+src/jflex/Lexer.java~
