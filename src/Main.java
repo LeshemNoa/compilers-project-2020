@@ -13,10 +13,10 @@ public class Main {
             Program prog;
 
             if (inputMethod.equals("parse")) {
-                Parser p = new Parser(new Lexer(new FileReader(filename)));
-                prog = (Program) (p.parse().value);
-                AstXMLSerializer xmlSerializer = new AstXMLSerializer();
-                xmlSerializer.serialize(prog, outfilename);
+		        Parser p = new Parser(new Lexer(new FileReader(filename)));
+		        prog = (Program) (p.parse().value);
+		        AstXMLSerializer xmlSerializer = new AstXMLSerializer();
+		        xmlSerializer.serialize(prog, outfilename);
             } else if (inputMethod.equals("unmarshal")) {
                 AstXMLSerializer xmlSerializer = new AstXMLSerializer();
                 prog = xmlSerializer.deserialize(new File(filename));
